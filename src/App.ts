@@ -3,6 +3,9 @@ import * as express from 'express';
 import * as logger from 'morgan';
 import * as bodyParser from 'body-parser';
 
+// IMPORT ALL ROUTES HERE
+import UserRouter from './routes/UserRouter';
+
 // CREATE AND CONFIG EXPRESS WEBSERVER
 class App {
   // REFERENCE TO THE EXPRESS INSTANCE
@@ -33,6 +36,7 @@ class App {
       });
     });
     this.express.use('/', router);
+    this.express.use('/api/v1/users', UserRouter);
   }
 }
 
