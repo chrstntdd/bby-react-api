@@ -33,9 +33,12 @@ app.use(logger('dev'));
 
 mongoose.Promise = global.Promise;
 
-// closeServer needs access to a server object, but that only
-// gets created when `runServer` runs, so we declare `server` here
-// and then assign a value to it on run
+/* 
+closeServer needs access to a server object, but that only
+gets created when `runServer` runs, so we declare `server` here
+and then assign a value to it on run
+*/
+
 let server;
 
 // TAKES A DATABASE URL AS AN ARGUMENT. NEEDED FOR INTEGRATION TESTS. DEFAULTS TO THE MAIN URL.

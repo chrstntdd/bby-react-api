@@ -27,7 +27,7 @@ const setUserInfo = req => ({
 exports.login = (req, res, next) => {
   const email = req.body.email;
   User.findOne({ email }, (err, user) => {
-    console.log(user);
+    /* errors are handled within config/passport.js */
     const userInfo = setUserInfo(req.user);
     res.status(200).json({
       token: `JWT ${generateToken(userInfo)}`,
@@ -36,15 +36,22 @@ exports.login = (req, res, next) => {
   });
 };
 
+/* registration route */
 exports.register = (req, res, next) => {
-  const email = req.body.email;
+  const email = `${req.body.employeeNumber}@bestbuy.com`;
   const firstName = req.body.firstName;
   const lastName = req.body.lastName;
   const password = req.body.password;
+  const employeeNumber = req.body.employeeNumber;
+  const storeNumber = req.body.storeNumber;
 
   // VALIDATION FOR REQUIRED FIELDS
-  if (!email)
-    return res.status(422).send({ error: 'You must enter an email address' });
+  if (!employeeNumber)
+    return res
+      .status(422)
+      .send({ error: 'You must enter your employee number' });
+  if (!storeNumber)
+    return res.status(422).send({ error: 'You must enter your store number' });
   if (!firstName || !lastName)
     return res.status(422).send({ error: 'You must enter your full name' });
   if (!password)
@@ -52,21 +59,25 @@ exports.register = (req, res, next) => {
 
   User.findOne({ email }, (err, existingUser) => {
     if (err) return next(err);
-    // IF EMAIL ALREADY EXISTS
+    /* If the user already has an account registered with their employee number */
     if (existingUser)
-      return res.status(422).send({ error: 'That email is already in use' });
+      return res
+        .status(422)
+        .send({ error: 'That employee number is already in use' });
 
-    // GENERATE VERIFY TOKEN
+    /* Generate a verify token for the user */
     crypto.randomBytes(48, (err, buffer) => {
       if (err) return next(err);
       const verifyToken = buffer.toString('hex');
-      // CREATE ACCOUNT
+      /* Create a new account since an existing account wasn't found. */
       let user = new User({
         email,
         password,
         isVerified: false,
         confirmationEmailToken: verifyToken,
-        profile: { firstName, lastName }
+        profile: { firstName, lastName },
+        storeNumber,
+        employeeNumber
       });
       user.save((err, user) => {
         if (err) return next(err);
@@ -83,6 +94,7 @@ exports.register = (req, res, next) => {
         };
 
         transporter.sendMail(emailData);
+        /* A confirmation email has been sent */
         return res.status(200).json({
           message: 'Please check your work email to confirm your account.'
         });
@@ -142,7 +154,7 @@ exports.forgotPassword = (req, res, next) => {
         const emailData = {
           to: existingUser.email,
           from: FROM_EMAIL,
-          subject: 'Best Buy Manifest Tool Password Reset',
+          subject: 'Quantified Password Reset',
           text:
             `${'You are receiving this because you (or someone else) have requested the reset of the password for your account.\n\n' +
               'Please click on the following link, or paste this into your browser to complete the process:\n\n' +
@@ -192,8 +204,7 @@ exports.verifyToken = (req, res, next) => {
         const emailData = {
           to: resetUser.email,
           from: FROM_EMAIL,
-          subject:
-            'Your Best Buy Manifest Tool Password Password Has Been Reset',
+          subject: 'Your Quantified Password Has Been Reset',
           text:
             'You are receiving this email because you changed your password. \n\n' +
             'If you did not request this change, please contact us immediately.'

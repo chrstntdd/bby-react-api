@@ -10,32 +10,51 @@ const JWT_SECRET = process.env.JWT_SECRET;
 
 const localOptions = { usernameField: 'email' };
 
-// LOCAL LOGIN STRATEGY
-const localLogin = new LocalStrategy(localOptions, (email, password, done) => {
-  User.findOne({ email: email }, (err, user) => {
-    if (err) {
-      return done(err);
-    }
-    if (!user) {
-      return done(null, false, {
-        error: 'Your login details could not be verified. Please try again.'
-      });
-    }
-
-    user.comparePassword(password, (err, isMatch) => {
+/* 
+* LOCAL LOGIN STRATEGY
+* Takes in form props dispatched from the loginUser action on the front end.
+* employeeNumber is already in the from EMPLOYEENUMBER@bestbuy.com
+*/
+const localLogin = new LocalStrategy(
+  localOptions,
+  (employeeNumber, password, done) => {
+    User.findOne({ email: employeeNumber }, (err, user) => {
+      /* if there was an error */
       if (err) {
         return done(err);
       }
-      if (!isMatch) {
+      /* if the supplied params dont return an account */
+      if (!user) {
         return done(null, false, {
-          error: 'Your login details could not be verified. Please try again.'
+          message:
+            "We can't seem to find an account registered with that id. Please try again"
+        });
+      }
+      /* if the user has an account, but has yet to verify their email */
+      if (!user.isVerified) {
+        return done(null, false, {
+          message: 'Please verify your email before using this service.'
         });
       }
 
-      return done(null, user);
+      user.comparePassword(password, (err, isMatch) => {
+        /* if there was an error */
+        if (err) {
+          return done(err);
+        }
+        /* if the supplied password param doesn't match the db password */
+        if (!isMatch) {
+          return done(null, false, {
+            message: 'Your password looks a bit off. Please try again.'
+          });
+        }
+
+        /* return the user successfully */
+        return done(null, user);
+      });
     });
-  });
-});
+  }
+);
 
 const jwtOptions = {
   // Telling Passport to check authorization headers for JWT

@@ -25,10 +25,10 @@ const UserSchema = new Schema(
         type: String
       }
     },
-    employeeNum: {
+    employeeNumber: {
       type: String
     },
-    storeNum: {
+    storeNumber: {
       type: Number
     },
     role: {
