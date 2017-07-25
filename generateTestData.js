@@ -132,3 +132,7 @@ fs.writeFile('./testdata.json', output, 'utf8', err => {
   if (err) return console.error(err);
   console.log('THE FILE WAS SAVED. THANK JESUS');
 });
+
+module.exports = {
+  fiveUsers
+};

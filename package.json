@@ -9,7 +9,7 @@
     "start": "node src/index.js",
     "watch": "nodemon src/index.js",
     "genData": "node generateTestData.js",
-    "test": "mocha --reporter spec --compilers ts:ts-node/register 'tests/**/*.test.ts'"
+    "test": "mocha -c --timeout 10000"
   },
   "dependencies": {
     "bcrypt-nodejs": "^0.0.3",
