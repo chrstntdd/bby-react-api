@@ -3,6 +3,7 @@ const crypto = require('crypto');
 const fs = require('fs');
 
 const generateUser = () => ({
+  _id: faker.random.uuid(),
   email: faker.internet.email(),
   password: faker.internet.password(),
   profile: {
