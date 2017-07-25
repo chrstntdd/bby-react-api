@@ -10,6 +10,10 @@ const generateUser = () => ({
     lastName: faker.name.lastName()
   },
   employeeNum: generateEmployeeNumber(),
+  storeNum: faker.random.number({
+    min: 1,
+    max: 2000
+  }),
   role: faker.random.arrayElement(['Member', 'Client', 'Owner', 'Admin']),
   resetPasswordToken: generateRandomBytes(),
   resetPasswordExpires: faker.date.future(0.1), //IN YEARS
