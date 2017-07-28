@@ -4,6 +4,9 @@
   "main": "index.js",
   "author": "Christian Todd <christiantodd27@icloud.com>",
   "license": "MIT",
+  "engines": {
+    "node": "8.1.4"
+  },
   "scripts": {
     "start": "node lib/altindex.js",
     "watch": "nodemon src/index.js",
