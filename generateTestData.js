@@ -124,6 +124,18 @@ const fiveUsers = () => {
   return users;
 };
 
+const generateNewUser = () => ({
+  email: faker.internet.email(),
+  password: faker.internet.password(),
+  firstName: faker.name.firstName(),
+  lastName: faker.name.lastName(),
+  employeeNumber: generateEmployeeNumber(),
+  storeNumber: faker.random.number({
+    min: 1,
+    max: 2000
+  })
+});
+
 const output = JSON.stringify(fiveUsers());
 
 fs.writeFile('./testdata.json', output, 'utf8', err => {
@@ -132,5 +144,6 @@ fs.writeFile('./testdata.json', output, 'utf8', err => {
 });
 
 module.exports = {
-  fiveUsers
+  fiveUsers,
+  generateNewUser
 };
