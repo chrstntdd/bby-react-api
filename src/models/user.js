@@ -56,6 +56,14 @@ const UserSchema = new Schema(
   }
 );
 
+UserSchema.virtual('fullName').get(function() {
+  return `${this.profile.firstName} ${this.profile.lastName}`;
+});
+
+UserSchema.virtual('url').get(function() {
+  return `/api/v1/users/${this._id}`;
+});
+
 UserSchema.pre('save', function(next) {
   const user = this;
   const SALT_FACTOR = 5;
@@ -79,4 +87,6 @@ UserSchema.methods.comparePassword = function(inputPassword, callback) {
   });
 };
 
-module.exports = mongoose.model('User', UserSchema);
+const User = mongoose.model('User', UserSchema);
+
+module.exports = { User };

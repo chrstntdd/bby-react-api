@@ -25,15 +25,34 @@ const setUserInfo = req => ({
 
 // LOGIN ROUTE
 exports.login = (req, res, next) => {
+  /* Sanitize and validate input */
+  req.checkBody('email', 'Please enter a valid email address').isEmail();
+  req.checkBody('email', 'Please enter an email').notEmpty();
+
+  req.sanitizeBody('email').escape();
+  req.sanitizeBody('email').trim();
+
+  /* Assign valid and sanitized input to a variable for use */
   const email = req.body.email;
-  User.findOne({ email }, (err, user) => {
-    /* errors are handled within config/passport.js */
-    const userInfo = setUserInfo(req.user);
-    res.status(200).json({
-      token: `JWT ${generateToken(userInfo)}`,
-      user: userInfo
+
+  /* Assign all errors to variable */
+  let errors = req.getValidationResult();
+
+  if (errors) {
+    res.status(400).json({
+      message: errors
     });
-  });
+    return;
+  } else {
+    User.findOne({ email }, (err, user) => {
+      /* errors are handled within config/passport.js */
+      const userInfo = setUserInfo(req.user);
+      res.status(200).json({
+        token: `JWT ${generateToken(userInfo)}`,
+        user: userInfo
+      });
+    });
+  }
 };
 
 /* registration route */

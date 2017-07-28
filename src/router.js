@@ -54,7 +54,7 @@ module.exports = app => {
     let upc = req.body.upc;
 
     // ASSIGN ALL ERRORS
-    let errors = req.validationErrors();
+    let errors = req.getValidationResult();
 
     // INSTANTIATE BBY SEARCH
     const search = bby.products(`upc=${upc}`);
