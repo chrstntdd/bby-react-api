@@ -16,6 +16,7 @@ chai.use(chaiHttp);
 
 process.env.NODE_ENV = 'test';
 
+const { generateNewUser } = require('../../generateTestData');
 const { runServer, closeServer } = require('../altindex');
 const { User } = require('../models/user');
 const TEST_DATABASE_URL = process.env.TEST_DATABASE_URL;
@@ -103,6 +104,40 @@ describe('The API', () => {
           err.response.body.message.should.equal(
             `No user found with the id: 42`
           );
+        });
+    });
+  });
+
+  describe('POST /api/v1/users - create a new user', () => {
+    const reqProps = [
+      'email',
+      'firstName',
+      'lastName',
+      'password',
+      'confirmPassword',
+      'employeeNumber',
+      'storeNumber'
+    ];
+
+    it('should create a new user when all the required fields are submitted', () => {
+      const newUser = generateNewUser();
+      return chai
+        .request(app)
+        .post('/api/v1/users')
+        .send({
+          email: newUser.email,
+          password: newUser.password,
+          confirmPassword: newUser.password,
+          firstName: newUser.firstName,
+          lastName: newUser.lastName,
+          employeeNumber: newUser.employeeNumber,
+          storeNumber: newUser.storeNumber
+        })
+        .then(res => {
+          res.should.be.json;
+          res.body.should.exist;
+          res.body.should.be.an('object');
+          res.body.should.contain.keys('message');
         });
     });
   });
