@@ -5,7 +5,6 @@
 require('dotenv').config();
 
 import Api from './Api';
-import * as http from 'http';
 const mongoose = require('mongoose');
 
 const DATABASE_URL = process.env.DATABASE_URL;
