@@ -3,15 +3,14 @@ const crypto = require('crypto');
 const fs = require('fs');
 
 const generateUser = () => ({
-  _id: faker.random.uuid(),
   email: faker.internet.email(),
   password: faker.internet.password(),
   profile: {
     firstName: faker.name.firstName(),
     lastName: faker.name.lastName()
   },
-  employeeNum: generateEmployeeNumber(),
-  storeNum: faker.random.number({
+  employeeNumber: generateEmployeeNumber(),
+  storeNumber: faker.random.number({
     min: 1,
     max: 2000
   }),
@@ -80,7 +79,6 @@ const generateArrOfTables = () => {
 const generateTable = () => {
   /* generate a single table instance */
   let table = {
-    id: faker.random.uuid(),
     createdOn: faker.date.recent(0.1), // IN YEARS
     products: []
   };
