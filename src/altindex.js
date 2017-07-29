@@ -26,7 +26,9 @@ const runServer = (databaseUrl = DATABASE_URL, port = PORT) =>
       }
       server = app.express
         .listen(port, () => {
-          console.info(`Your server is listening on port ${port} 🤔`);
+          console.info(
+            `Your server is listening on port ${port} with the db ${databaseUrl}🤔`
+          );
           resolve();
         })
         .on('error', err => {
