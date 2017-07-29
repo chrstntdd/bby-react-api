@@ -49,7 +49,7 @@ describe('The API', () => {
     'isVerified',
     'tableData'
   ];
-
+  /* Get all users */
   describe('GET /api/v1/users - get all users', () => {
     it('should return a JSON array', () => {
       return chai.request(app).get('/api/v1/users').then(res => {
@@ -77,7 +77,7 @@ describe('The API', () => {
       });
     });
   });
-
+  /* Get user by id */
   describe('GET /api/v1/users/:id - get user by id', () => {
     it('should return the user with the requested ID', () => {
       let userId;
@@ -108,6 +108,7 @@ describe('The API', () => {
     });
   });
 
+  /* Post new user */
   describe('POST /api/v1/users - create a new user', () => {
     const reqProps = [
       'email',
@@ -201,6 +202,42 @@ describe('The API', () => {
           err.response.error;
           err.response.error.status.should.equal(406);
         });
+    });
+  });
+
+  /* Delete user by id */
+  describe('DELETE /api/v1/users/:id - delete a user by id params', () => {
+    it('should delete that the user with the requested id', () => {
+      return User.findOne().exec().then(userObject => {
+        let formerUser = userObject;
+        return chai
+          .request(app)
+          .del(`/api/v1/users/${formerUser.id}`)
+          .then(res => {
+            res.status.should.equal(202);
+            res.should.be.json;
+            res.body.should.contain.keys('message');
+            return User.findById(formerUser.id).exec();
+          })
+          .then(_formerUser => {
+            should.not.exist(_formerUser);
+          });
+      });
+    });
+    it("should return an error if the user with the requested id doesn't  exist", () => {
+      return User.findOne().exec().then(userObject => {
+        let pathToNonExistentUser = '/api/v1/users/1337';
+        return chai
+          .request(app)
+          .del(pathToNonExistentUser)
+          .then(res => {
+            res.status.should.equal(400);
+          })
+          .catch(err => {
+            err.response.error.path.should.equal(pathToNonExistentUser);
+            err.response.error.status.should.equal(400);
+          });
+      });
     });
   });
 });

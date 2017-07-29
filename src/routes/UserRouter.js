@@ -223,10 +223,29 @@ export default class UserRouter {
     });
   }
 
+  /* delete an existing user by the id params */
+  deleteById(req: $Request, res: $Response): void {
+    User.findByIdAndRemove(req.params.id)
+      .then(userObject => {
+        res.status(202).json({
+          status: res.status,
+          message: `${userObject.profile.firstName} ${userObject.profile
+            .lastName} has been removed.`
+        });
+      })
+      .catch(err => {
+        res.status(400).json({
+          status: res.status,
+          message: 'There was an error, my guy'
+        });
+      });
+  }
+
   /* attach route handlers to their endpoints */
   init(): void {
     this.router.get('/', this.getAll);
     this.router.get('/:id', this.getById);
     this.router.post('/', this.createNew);
+    this.router.delete('/:id', this.deleteById);
   }
 }
