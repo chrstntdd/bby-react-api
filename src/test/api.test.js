@@ -140,5 +140,67 @@ describe('The API', () => {
           res.body.should.contain.keys('message');
         });
     });
+    it('should 409 for a existing user trying to register with valid credentials', () => {
+      return User.findOne().exec().then(userObject => {
+        const { email, password, employeeNumber, storeNumber } = userObject;
+        return chai
+          .request(app)
+          .post('/api/v1/users')
+          .send({
+            email,
+            password,
+            confirmPassword: password,
+            firstName: userObject.profile.firstName,
+            lastName: userObject.profile.lastName,
+            employeeNumber,
+            storeNumber
+          })
+          .then(res => {
+            res.status.should.equal(409);
+          })
+          .catch(err => {
+            err.response.error;
+            err.response.error.status.should.equal(409);
+            err.response.body.message.should.equal(
+              'Sorry, it looks as if there is already an account associated with that employee number'
+            );
+          });
+      });
+    });
+    it('should 406 if there are validation issue', () => {
+      const invalidUser = generateNewUser();
+      invalidUser.firstName = 42;
+      invalidUser.lastName = 24;
+      invalidUser.storeNumber = 'NotAValidInt';
+      invalidUser.employeeNumber =
+        '<script>let i = 0; while(true){i++}</script>';
+      const {
+        email,
+        password,
+        firstName,
+        lastName,
+        employeeNumber,
+        storeNumber
+      } = invalidUser;
+      return chai
+        .request(app)
+        .post('/api/v1/users')
+        .send({
+          email,
+          password,
+          confirmPassword: password,
+          firstName,
+          lastName,
+          employeeNumber,
+          storeNumber
+        })
+        .then(res => {
+          res.status.should.equal(406);
+        })
+        .catch(err => {
+          err.response.error;
+          err.response.error.status.should.equal(406);
+        });
+    });
   });
 });
