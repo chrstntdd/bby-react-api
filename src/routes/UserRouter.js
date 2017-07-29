@@ -80,6 +80,65 @@ export default class UserRouter {
 
   /* create a new user */
   createNew(req: $Request, res: $Response, next: $NextFunction): void {
+    /* Validation stack. Prepare yourself */
+    /* No need to validate the email since it's generated on the server from the employee number */
+
+    req.checkBody('firstName', 'Please enter your first name').notEmpty();
+    req
+      .checkBody(
+        'firstName',
+        'Only letters are allowed for names. Try again please.'
+      )
+      .isAlpha();
+
+    req.checkBody('lastName', 'Please enter your last name').notEmpty();
+    req
+      .checkBody(
+        'lastName',
+        'Only letters are allowed for names. Try again please.'
+      )
+      .isAlpha();
+
+    req.checkBody('password', 'Please enter in a password').notEmpty();
+    req
+      .checkBody(
+        'password',
+        'Your password should only contain alphanumeric characters'
+      )
+      .isAlphanumeric();
+
+    req
+      .checkBody('employeeNumber', 'Please enter your employee number')
+      .notEmpty();
+    req
+      .checkBody(
+        'employeeNumber',
+        'Your employee number should be in the format <LETTER><NUMBERiD>'
+      )
+      .isAlphanumeric();
+
+    req.checkBody('storeNumber', 'Please enter your store number').notEmpty();
+    req.checkBody('storeNumber', 'Please enter a valid store number').isInt();
+
+    /* Time to sanitize! */
+
+    req.sanitizeBody('firstName').escape();
+    req.sanitizeBody('firstName').trim();
+
+    req.sanitizeBody('lastName').escape();
+    req.sanitizeBody('lastName').trim();
+
+    req.sanitizeBody('password').escape();
+    req.sanitizeBody('password').trim();
+
+    req.sanitizeBody('employeeNumber').escape();
+    req.sanitizeBody('employeeNumber').trim();
+
+    req.sanitizeBody('storeNumber').escape();
+    req.sanitizeBody('storeNumber').trim();
+    req.sanitizeBody('storeNumber').toInt(10);
+
+    /* Assign validated and sanitized inputs to variables for later use */
     const email = `${req.body.employeeNumber}@bestbuy.com`;
     const firstName = req.body.firstName;
     const lastName = req.body.lastName;
@@ -87,12 +146,16 @@ export default class UserRouter {
     const employeeNumber = req.body.employeeNumber;
     const storeNumber = req.body.storeNumber;
 
-    /* ========================== */
-    /* CHECK FOR ALL VALID FIELDS */
-    /* including validation and   */
-    /* serialization. use express */
-    /* validator!!                */
-    /* ========================== */
+    /* Accumulate errors in result and return error if so */
+    req.getValidationResult().then(result => {
+      if (!result.isEmpty()) {
+        res.status(406).json({
+          status: res.status,
+          messages: result.array()
+        });
+        return;
+      }
+    });
 
     User.findOne({ email }, (err, existingUser) => {
       if (err) {
@@ -140,13 +203,21 @@ export default class UserRouter {
                 .host}/confirm-email/${verifyToken}\n\n` +
               `If you did not request this, please ignore this email.\n`
           };
-          /* comment out for testing */
-          // transporter.sendMail(emailData);
-          return res.status(201).json({
-            message:
-              'Your account has been created, now please check your work email to confirm your account.',
-            status: res.status
-          });
+          /* don't send a confirmation email when testing, but return the same result */
+          if (process.env.NODE_ENV === 'test') {
+            return res.status(201).json({
+              message:
+                'Your account has been created, now please check your work email to confirm your account.',
+              status: res.status
+            });
+          } else {
+            transporter.sendMail(emailData);
+            return res.status(201).json({
+              message:
+                'Your account has been created, now please check your work email to confirm your account.',
+              status: res.status
+            });
+          }
         });
       });
     });
