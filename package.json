@@ -10,7 +10,7 @@
   "scripts": {
     "start": "node lib/altindex.js",
     "watch": "nodemon src/index.js",
-    "genData": "node generateTestData.js",
+    "genData": "node -e 'require(\"./generateTestData.js\").writeFileToDisk()'",
     "test": "mocha --compilers js:babel-core/register ./src/test -c --timeout 10000 ",
     "flow": "node_modules/.bin/flow"
   },

@@ -2,29 +2,42 @@ const faker = require('faker');
 const crypto = require('crypto');
 const fs = require('fs');
 
-const generateUser = () => ({
-  email: faker.internet.email(),
-  password: faker.internet.password(),
-  profile: {
-    firstName: faker.name.firstName(),
-    lastName: faker.name.lastName()
-  },
-  employeeNumber: generateEmployeeNumber(),
-  storeNumber: faker.random.number({
-    min: 1,
-    max: 2000
-  }),
-  role: faker.random.arrayElement(['Member', 'Client', 'Owner', 'Admin']),
-  resetPasswordToken: generateRandomBytes(),
-  resetPasswordExpires: faker.date.future(0.1), //IN YEARS
-  confirmationEmailToken: generateRandomBytes(),
-  isVerified: faker.random.boolean(),
-  created: faker.date.past(0.1), //IN YEARS
-  tableData: {
-    tableMetadata: '',
-    tables: generateArrOfTables()
+const genValidPassword = () => {
+  let validPassword = [];
+
+  for (let i = 0; i < 10; i++) {
+    validPassword.push(faker.random.alphaNumeric());
   }
-});
+  return validPassword.join('');
+};
+
+const generateUser = () => {
+  const employeeNumber = generateEmployeeNumber();
+  const validPassword = genValidPassword();
+  return {
+    email: `${employeeNumber}@bestbuy.com`,
+    password: validPassword,
+    profile: {
+      firstName: faker.name.firstName(),
+      lastName: faker.name.lastName()
+    },
+    employeeNumber,
+    storeNumber: faker.random.number({
+      min: 1,
+      max: 2000
+    }),
+    role: faker.random.arrayElement(['Member', 'Client', 'Owner', 'Admin']),
+    resetPasswordToken: generateRandomBytes(),
+    resetPasswordExpires: faker.date.future(0.1), //IN YEARS
+    confirmationEmailToken: generateRandomBytes(),
+    isVerified: faker.random.boolean(),
+    created: faker.date.past(0.1), //IN YEARS
+    tableData: {
+      tableMetadata: '',
+      tables: generateArrOfTables()
+    }
+  };
+};
 
 const generateEmployeeNumber = () => {
   let letters = [
@@ -124,26 +137,32 @@ const fiveUsers = () => {
   return users;
 };
 
-const generateNewUser = () => ({
-  email: faker.internet.email(),
-  password: faker.internet.password(),
-  firstName: faker.name.firstName(),
-  lastName: faker.name.lastName(),
-  employeeNumber: generateEmployeeNumber(),
-  storeNumber: faker.random.number({
-    min: 1,
-    max: 2000
-  })
-});
+const generateNewUser = () => {
+  const employeeNumber = generateEmployeeNumber();
+  const validPassword = genValidPassword();
+  return {
+    email: `${employeeNumber}@bestbuy.com`,
+    password: validPassword,
+    firstName: faker.name.firstName(),
+    lastName: faker.name.lastName(),
+    employeeNumber,
+    storeNumber: faker.random.number({
+      min: 1,
+      max: 2000
+    })
+  };
+};
 
 const output = JSON.stringify(fiveUsers());
 
-fs.writeFile('./testdata.json', output, 'utf8', err => {
-  if (err) return console.error(err);
-  console.log('THE FILE WAS SAVED. THANK JESUS');
-});
+const writeFileToDisk = () => {
+  fs.writeFile('./testdata.json', output, 'utf8', err => {
+    if (err) return console.error(err);
+    console.log('THE FILE WAS SAVED. THANK JESUS');
+  });
+};
 
 module.exports = {
-  fiveUsers,
-  generateNewUser
+  generateNewUser,
+  writeFileToDisk
 };
