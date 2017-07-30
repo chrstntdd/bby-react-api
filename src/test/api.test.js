@@ -240,4 +240,89 @@ describe('The API', () => {
       });
     });
   });
+  describe("PUT /api/v1/users:id - update a user's information by id params", () => {
+    it('should update the fields specified in the query', () => {
+      const dataToUpdate = {
+        profile: {
+          firstName: 'Clarice',
+          lastName: 'Thompson'
+        },
+        storeNumber: 420,
+        password: 'supersecret password'
+      };
+      return User.findOne().exec().then(userObject => {
+        dataToUpdate.id = userObject.id;
+
+        return chai
+          .request(app)
+          .put(`/api/v1/users/${userObject.id}`)
+          .send(dataToUpdate)
+          .then(res => {
+            res.should.be.json;
+            res.body.should.contain.keys('message');
+            return User.findById(dataToUpdate.id).exec();
+          })
+          .then(updatedUser => {
+            updatedUser.profile.firstName.should.contain(
+              dataToUpdate.profile.firstName
+            );
+            updatedUser.profile.lastName.should.contain(
+              dataToUpdate.profile.lastName
+            );
+            updatedUser.storeNumber.should.equal(dataToUpdate.storeNumber);
+            updatedUser.password.should.equal(dataToUpdate.password);
+          });
+      });
+    });
+    it("should return an error if the user with the requested id doesn't exist", () => {
+      const pathToNonExistentUser = '/api/v1/users/1460';
+      const dataToUpdate = {
+        profile: {
+          firstName: 'Clarice',
+          lastName: 'Thompson'
+        },
+        storeNumber: 420,
+        password: 'supersecret password'
+      };
+      return User.findOne().exec().then(userObject => {
+        dataToUpdate.id = userObject.id;
+        return chai
+          .request(app)
+          .put(pathToNonExistentUser)
+          .send(dataToUpdate)
+          .then(res => {
+            res.status.should.equal(404);
+          })
+          .catch(err => {
+            err.should.exist;
+            err.response.error.path.should.equal(pathToNonExistentUser);
+            err.response.error.status.should.equal(404);
+          });
+      });
+    });
+    it('should reject updates to restricted props', () => {
+      const dataToUpdate = {
+        employeeNumber: '1075394',
+        role: 'Admin',
+        isVerified: true
+      };
+      return User.findOne().exec().then(userObject => {
+        dataToUpdate.id = userObject.id;
+        return chai
+          .request(app)
+          .put(`/api/v1/users/${userObject.id}`)
+          .send(dataToUpdate)
+          .then(res => {
+            res.status.should.equal(401);
+          })
+          .catch(err => {
+            err.should.exist;
+            err.response.error.path.should.equal(
+              `/api/v1/users/${userObject.id}`
+            );
+            err.response.error.status.should.equal(401);
+          });
+      });
+    });
+  });
 });

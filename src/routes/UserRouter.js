@@ -241,11 +241,60 @@ export default class UserRouter {
       });
   }
 
+  updateById(req: $Request, res: $Response): void {
+    const updated = {};
+    const mutableFields = ['profile', 'storeNumber', 'password'];
+    const immutableFields = [
+      'email',
+      'employeeNumber',
+      'role',
+      'resetPasswordToken',
+      'resetPasswordExpires',
+      'confirmationEmailToken',
+      'isVerified',
+      'created'
+    ];
+
+    /* Check that the user isn't submitting update params that are restricted */
+    immutableFields.forEach(field => {
+      if (field in req.body) {
+        return res.status(401).json({
+          status: res.status,
+          message: "Sorry, you can't update those settings on your account"
+        });
+      }
+    });
+
+    /* Accumulates new user object with props send in from the request body */
+    mutableFields.forEach(field => {
+      if (field in req.body) {
+        updated[field] = req.body[field];
+      }
+    });
+
+    User.findByIdAndUpdate(req.params.id, { $set: updated }, { new: true })
+      .exec()
+      .then(userObject => {
+        res.status(201).json({
+          status: res.status,
+          message: `${userObject.profile.firstName} ${userObject.profile
+            .lastName} has updated their account`
+        });
+      })
+      .catch(err => {
+        res.status(404).json({
+          status: res.status,
+          message: 'Who are you looking for anyway?'
+        });
+      });
+  }
+
   /* attach route handlers to their endpoints */
   init(): void {
     this.router.get('/', this.getAll);
     this.router.get('/:id', this.getById);
     this.router.post('/', this.createNew);
     this.router.delete('/:id', this.deleteById);
+    this.router.put('/:id', this.updateById);
   }
 }
