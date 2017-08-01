@@ -366,6 +366,87 @@ export default class UserRouter {
     );
   }
 
+  /* forgot password handler for existing users */
+  forgotPassword(req: $Request, res: $Response, next: $NextFunction): void {
+    /* Sanitize and validate input */
+    req.checkBody('email', 'Please enter a valid email address').isEmail();
+    req.checkBody('email', 'Please enter an email').notEmpty();
+
+    req.sanitizeBody('email').escape();
+    req.sanitizeBody('email').trim();
+
+    /* Assign valid and sanitized input to a variable for use */
+    const email = req.body.email;
+
+    const errors = { status: 406, messages: [] };
+
+    /* Accumulate errors in result and return errors if so */
+    req.getValidationResult().then(result => {
+      if (!result.isEmpty()) {
+        errors.messages = result.array();
+      }
+    });
+
+    User.findOne({ email }, (err, existingUser) => {
+      if (err) return next(err);
+
+      /* if there is no user found or errors */
+      if (existingUser === null || errors.messages.length > 0) {
+        return res
+          .status(errors.messages.length > 0 ? errors.status : 422)
+          .json({
+            status: errors.messages.length > 0 ? errors.status : 422,
+            messages:
+              errors.messages.length > 0
+                ? errors.messages
+                : "There doesn't seem to be an account associated with that email. Please try again."
+          });
+      }
+
+      /* if a user is found, generate a token for resetting their password */
+      randomBytes(24, (err, buffer) => {
+        const resetToken = buffer.toString('hex');
+        if (err) return next(err);
+
+        existingUser.resetPasswordToken = resetToken;
+        existingUser.resetPasswordExpires = Date.now() + 3600000; /* 1 hour */
+
+        existingUser.save(err => {
+          if (err) return err;
+          const transporter = createTransport(SMTP_URL);
+          const emailData = {
+            to: existingUser.email,
+            from: FROM_EMAIL,
+            subject: 'Quantified Password Reset',
+            text:
+              `${'You are receiving this because you (or someone else) have requested the reset of the password for your account.\n\n' +
+                'Please click on the following link, or paste this into your browser to complete the process:\n\n' +
+                'http://'}${req.headers
+                .host}/reset-password/${resetToken}\n\n` +
+              `If you did not request this, please ignore this email and your password will remain unchanged.\n`
+          };
+          /* don't send email when testing, but return the same result */
+          if (process.env.NODE_ENV === 'test') {
+            return res.status(200).json({
+              status: res.status,
+              resetToken,
+              message:
+                'Thank you. Please check your work email for a message containing the link to reset your password.'
+            });
+          } else {
+            return res.status(200).json({
+              status: res.status,
+              resetToken,
+              message:
+                'Thank you. Please check your work email for a message containing the link to reset your password.'
+            });
+            transporter.sendMail(emailData);
+          }
+        });
+      });
+    });
+  }
+
   /* attach route handlers to their endpoints */
   init(): void {
     this.router.get('/', this.getAll);
@@ -373,6 +454,7 @@ export default class UserRouter {
     this.router.post('/', this.createNew);
     this.router.post('/sign-in', this.signIn, requireLogin);
     this.router.post('/verify-email/:token', this.verifyEmail);
+    this.router.post('/forgot-password', this.forgotPassword);
     this.router.put('/:id', this.updateById);
     this.router.delete('/:id', this.deleteById);
   }

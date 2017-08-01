@@ -422,4 +422,86 @@ describe('The API', () => {
         });
     });
   });
+
+  /* Forgot password handler */
+  describe('POST /api/v1/forgot-password - handle sending forgot password email', () => {
+    it('should set a reset token on the users account', () => {
+      return User.findOne().exec().then(userObject => {
+        const initialToken = userObject.resetPasswordToken;
+        const { email } = userObject;
+        return chai
+          .request(app)
+          .post('/api/v1/users/forgot-password')
+          .send({ email })
+          .then(res => {
+            const newToken = res.body.resetToken;
+            res.should.exist;
+            res.should.be.json;
+            res.status.should.equal(200);
+            res.body.should.contain.keys('resetToken', 'message');
+            return newToken;
+          })
+          .then(newToken => {
+            return chai
+              .request(app)
+              .get(`/api/v1/users/${userObject._id}`)
+              .then(res => {
+                res.body.resetPasswordToken.should.equal(newToken);
+              });
+          });
+      });
+    });
+    it('should return an error message if the email is blank', () => {
+      return chai
+        .request(app)
+        .post('/api/v1/users/forgot-password')
+        .then(res => {
+          res.status.should.equal(406);
+        })
+        .catch(err => {
+          err.should.exist;
+          err.status.should.equal(406);
+          const validationMsg = JSON.parse(err.response.error.text);
+          validationMsg.should.be.an('object');
+          validationMsg.messages.should.be.an('array');
+          validationMsg.messages.should.have.length.of.at.least(1);
+        });
+    });
+    it('should return an error message if the email is invalid', () => {
+      const invalidEmail = 'iinvaL!d3ma!L';
+      return chai
+        .request(app)
+        .post('/api/v1/users/forgot-password')
+        .send({ email: invalidEmail })
+        .then(res => {
+          res.status.should.equal(406);
+        })
+        .catch(err => {
+          err.should.exist;
+          err.status.should.equal(406);
+          const validationMsg = JSON.parse(err.response.error.text);
+          validationMsg.should.be.an('object');
+          validationMsg.messages.should.be.an('array');
+          validationMsg.messages.should.have.length.of.at.least(1);
+          validationMsg.messages[0].value.should.equal(invalidEmail);
+        });
+    });
+    it("should return an error message if the user can't be found with the supplied email", () => {
+      return chai
+        .request(app)
+        .post('/api/v1/users/forgot-password')
+        .send({ email: 'a1075394@bestbuy.com' })
+        .then(res => {
+          res.should.exist;
+          res.status.should.equal(422);
+        })
+        .catch(err => {
+          err.should.exist;
+          err.status.should.equal(422);
+          const validationMsg = JSON.parse(err.response.error.text);
+          validationMsg.should.be.an('object');
+          validationMsg.messages.should.be.a('string');
+        });
+    });
+  });
 });
