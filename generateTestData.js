@@ -30,7 +30,6 @@ const generateUser = () => {
     resetPasswordToken: generateRandomBytes(),
     resetPasswordExpires: faker.date.future(0.1), //IN YEARS
     confirmationEmailToken: generateRandomBytes(),
-    isVerified: faker.random.boolean(),
     created: faker.date.past(0.1), //IN YEARS
     tableData: {
       tableMetadata: '',
