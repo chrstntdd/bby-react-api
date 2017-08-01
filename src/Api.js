@@ -10,6 +10,7 @@ import type { $Request, $Response, $NextFunction, $Application } from 'express';
 
 /* import all routers */
 import UserRouter from './routes/UserRouter';
+import BestBuyRouter from './routes/BestBuyRouter';
 
 export default class Api {
   /* annotate with the express $Application type */
@@ -48,8 +49,10 @@ export default class Api {
   routes(): void {
     /* create an instance of the user router */
     const userRouter = new UserRouter();
+    const bestBuyRouter = new BestBuyRouter();
 
     /* attach the user router to our express app */
     this.express.use(userRouter.path, userRouter.router);
+    this.express.use(bestBuyRouter.path, bestBuyRouter.router);
   }
 }
