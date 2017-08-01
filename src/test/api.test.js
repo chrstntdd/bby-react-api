@@ -135,10 +135,21 @@ describe('The API', () => {
           storeNumber: newUser.storeNumber
         })
         .then(res => {
+          const newUser = res.body.user;
           res.should.be.json;
           res.body.should.exist;
           res.body.should.be.an('object');
-          res.body.should.contain.keys('message');
+          res.body.should.contain.keys('message', 'user');
+          return newUser;
+        })
+        .then(newUser => {
+          /* check that user now exists in the DB with another get request */
+          const { _id } = newUser;
+          return chai.request(app).get(`/api/v1/users/${_id}`).then(res => {
+            res.should.exist;
+            res.should.be.json;
+            res.body._id.should.equal(_id);
+          });
         });
     });
     it('should 409 for a existing user trying to register with valid credentials', () => {

@@ -260,14 +260,16 @@ export default class UserRouter {
             return res.status(201).json({
               message:
                 'Your account has been created, now please check your work email to confirm your account.',
-              status: res.status
+              status: res.status,
+              user
             });
           } else {
             transporter.sendMail(emailData);
             return res.status(201).json({
               message:
                 'Your account has been created, now please check your work email to confirm your account.',
-              status: res.status
+              status: res.status,
+              user
             });
           }
         });
