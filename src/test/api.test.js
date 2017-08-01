@@ -389,4 +389,37 @@ describe('The API', () => {
         });
     });
   });
+
+  /* User verify account */
+  describe('POST /api/users/verify-email/:token - verify users account to allow for use of the service', () => {
+    it('should flip the isVerified prop on a users account', () => {
+      return User.findOne().exec().then(userObject => {
+        const { confirmationEmailToken } = userObject;
+        userObject.isVerified.should.equal(false);
+        return chai
+          .request(app)
+          .post(`/api/v1/users/verify-email/${confirmationEmailToken}`)
+          .then(res => {
+            res.should.exist;
+            res.should.be.json;
+            res.status.should.equal(200);
+            res.body.should.contain.keys('token', 'user');
+            res.body.user.isVerified.should.equal(true);
+          });
+      });
+    });
+    it("should return an error message if the confirmation token isnt tied to an existing user's account", () => {
+      return chai
+        .request(app)
+        .post(`/api/v1/users/verify-email/9bB9zLmc23G2EF5p`)
+        .then(res => {
+          res.status.should.equal(422);
+        })
+        .catch(err => {
+          err.should.exist;
+          err.response.body.should.contain.keys('message');
+          err.status.should.equal(422);
+        });
+    });
+  });
 });

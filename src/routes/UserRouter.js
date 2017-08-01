@@ -17,12 +17,12 @@ const FROM_EMAIL = process.env.FROM_EMAIL;
 /* Utility functions */
 const generateJWT = user => sign(user, JWT_SECRET, { expiresIn: '2h' });
 
-const setUserInfo = req => ({
-  _id: req._id,
-  firstName: req.profile.firstName,
-  lastName: req.profile.lastName,
-  email: req.email,
-  role: req.role
+const setUserInfo = user => ({
+  email: user.email,
+  firstName: user.profile.firstName,
+  lastName: user.profile.lastName,
+  role: user.role,
+  isVerified: user.isVerified
 });
 
 /* Passport middleware */
@@ -115,12 +115,7 @@ export default class UserRouter {
         /* errors are handles within the passport.js config */
 
         /* grab data from user response to set in JWT */
-        const userInfo = {
-          email: existingUser.email,
-          firstName: existingUser.profile.firstName,
-          lastName: existingUser.profile.lastName,
-          role: existingUser.role
-        };
+        const userInfo = setUserInfo(existingUser);
 
         return res.status(200).json({
           token: `JWT ${generateJWT(userInfo)}`,
@@ -344,12 +339,40 @@ export default class UserRouter {
       });
   }
 
+  /* verify an existing users account */
+  verifyEmail(req: $Request, res: $Response, next: $NextFunction): void {
+    User.findOne(
+      { confirmationEmailToken: req.params.token },
+      (err, existingUser) => {
+        if (!existingUser) {
+          return res.status(422).json({
+            status: res.status,
+            message: 'Account not found'
+          });
+        } else {
+          /* if a user is found, flip the verified flag and set auth headers */
+          existingUser.isVerified = true;
+          existingUser.save(err => {
+            if (err) return next(err);
+            const userInfo = setUserInfo(existingUser);
+            return res.status(200).json({
+              token: `JWT ${generateJWT(userInfo)}`,
+              user: userInfo
+            });
+            next();
+          });
+        }
+      }
+    );
+  }
+
   /* attach route handlers to their endpoints */
   init(): void {
     this.router.get('/', this.getAll);
     this.router.get('/:id', this.getById);
     this.router.post('/', this.createNew);
     this.router.post('/sign-in', this.signIn, requireLogin);
+    this.router.post('/verify-email/:token', this.verifyEmail);
     this.router.put('/:id', this.updateById);
     this.router.delete('/:id', this.deleteById);
   }
