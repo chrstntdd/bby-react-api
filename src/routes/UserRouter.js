@@ -25,6 +25,13 @@ const setUserInfo = req => ({
   role: req.role
 });
 
+/* Passport middleware */
+const passport = require('passport');
+const passportService = require('../config/passport');
+
+const requireAuth = passport.authenticate('jwt', { session: false });
+const requireLogin = passport.authenticate('local', { session: false });
+
 /* 
 *
 * Main user router class
@@ -61,6 +68,7 @@ export default class UserRouter {
         });
       });
   }
+
   /* get single user by id */
   getById(req: $Request, res: $Response): void {
     User.findById(req.params.id)
@@ -78,7 +86,51 @@ export default class UserRouter {
       });
   }
 
-  /* create a new user */
+  /* Sign in handler*/
+  signIn(req: $Request, res: $Response, next: $NextFunction): void {
+    /* Sanitize and validate input */
+    req.checkBody('email', 'Please enter a valid email address').isEmail();
+    req.checkBody('email', 'Please enter an email').notEmpty();
+
+    req.sanitizeBody('email').escape();
+    req.sanitizeBody('email').trim();
+
+    /* Assign valid and sanitized input to a variable for use */
+    const email = req.body.email;
+
+    /* Accumulate errors in result and return errors if so */
+    req.getValidationResult().then(result => {
+      if (!result.isEmpty()) {
+        res.status(406).json({
+          status: res.status,
+          messages: result.array()
+        });
+        return;
+      }
+    });
+
+    User.findOne({ email }, (err, existingUser) => {
+      if (err) return next(err);
+      if (existingUser) {
+        /* errors are handles within the passport.js config */
+
+        /* grab data from user response to set in JWT */
+        const userInfo = {
+          email: existingUser.email,
+          firstName: existingUser.profile.firstName,
+          lastName: existingUser.profile.lastName,
+          role: existingUser.role
+        };
+
+        return res.status(200).json({
+          token: `JWT ${generateJWT(userInfo)}`,
+          user: userInfo
+        });
+      }
+    });
+  }
+
+  /* create a new user (Register) */
   createNew(req: $Request, res: $Response, next: $NextFunction): void {
     /* Validation stack. Prepare yourself */
     /* No need to validate the email since it's generated on the server from the employee number */
@@ -241,6 +293,7 @@ export default class UserRouter {
       });
   }
 
+  /* update an existing user by the id params */
   updateById(req: $Request, res: $Response): void {
     const updated = {};
     const mutableFields = ['profile', 'storeNumber', 'password'];
@@ -294,7 +347,8 @@ export default class UserRouter {
     this.router.get('/', this.getAll);
     this.router.get('/:id', this.getById);
     this.router.post('/', this.createNew);
-    this.router.delete('/:id', this.deleteById);
+    this.router.post('/sign-in', this.signIn, requireLogin);
     this.router.put('/:id', this.updateById);
+    this.router.delete('/:id', this.deleteById);
   }
 }

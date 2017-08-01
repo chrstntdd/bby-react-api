@@ -240,6 +240,8 @@ describe('The API', () => {
       });
     });
   });
+
+  /* Update user by id */
   describe("PUT /api/v1/users:id - update a user's information by id params", () => {
     it('should update the fields specified in the query', () => {
       const dataToUpdate = {
@@ -323,6 +325,57 @@ describe('The API', () => {
             err.response.error.status.should.equal(401);
           });
       });
+    });
+  });
+
+  /* User sign in */
+  describe('POST /api/v1/users/sign-in - allow user to authenticate and receive JWT ', () => {
+    it('should allow a user to sign in and issue a valid JWT', () => {
+      return User.findOne().exec().then(userObject => {
+        const { email } = userObject;
+        return chai
+          .request(app)
+          .post('/api/v1/users/sign-in')
+          .send({ email })
+          .then(res => {
+            res.should.exist;
+            res.should.be.json;
+            res.status.should.equal(200);
+            res.body.should.contain.keys('token', 'user');
+          });
+      });
+    });
+    it('should return validation errors if the email is empty', () => {
+      return chai
+        .request(app)
+        .post('/api/v1/users/sign-in')
+        .then(res => {
+          res.status.should.equal(406);
+        })
+        .catch(err => {
+          const validationMsg = JSON.parse(err.response.error.text);
+          validationMsg.should.be.an('object');
+          validationMsg.messages.should.be.an('array');
+          validationMsg.messages.should.have.length.of.at.least(1);
+          err.response.error.status.should.equal(406);
+        });
+    });
+    it('should return validation errors if the email fails validation', () => {
+      const invalidEmail = 'invalidemai1.com-';
+      return chai
+        .request(app)
+        .post('/api/v1/users/sign-in')
+        .send({ email: invalidEmail })
+        .then(res => {
+          res.status.should.equal(406);
+        })
+        .catch(err => {
+          const validationMsg = JSON.parse(err.response.error.text);
+          validationMsg.should.be.an('object');
+          validationMsg.messages.should.be.an('array');
+          validationMsg.messages[0].value.should.equal(invalidEmail);
+          err.response.error.status.should.equal(406);
+        });
     });
   });
 });
