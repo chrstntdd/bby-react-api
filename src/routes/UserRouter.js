@@ -447,6 +447,65 @@ export default class UserRouter {
     });
   }
 
+  resetPassword(req: $Request, res: $Response, next: $NextFunction): void {
+    User.findOne(
+      {
+        resetPasswordToken: req.params.token,
+        resetPasswordExpires: { $gt: Date.now() }
+      },
+      (err, existingUser) => {
+        if (!existingUser) {
+          return res.status(422).json({
+            status: res.status,
+            message:
+              'Whoops! It looks like your reset token has already expired. Please try to reset your password again.'
+          });
+        }
+
+        /* Sanitize password */
+        req.sanitizeBody('password').escape();
+        req.sanitizeBody('password').trim();
+
+        /* Assign sanitized password to variable */
+        const newPassword = req.body.password;
+
+        /* save the new password and clear the reset token in DB */
+        existingUser.password = newPassword;
+        existingUser.resetPasswordToken = undefined;
+        existingUser.resetPasswordExpires = undefined;
+
+        existingUser.save(err => {
+          if (err) return next(err);
+
+          /* if password reset is successful, alert via email */
+          const transporter = createTransport(SMTP_URL);
+          const emailData = {
+            to: existingUser.email,
+            from: FROM_EMAIL,
+            subject: 'Your Quantified password has been reset',
+            text:
+              'You are receiving this email because you changed your password. \n\n' +
+              'If you did not request this change, please contact us immediately.'
+          };
+
+          /* when testing, don't send a confirmation email */
+          if (process.env.NODE_ENV === 'test') {
+            return res.status(200).json({
+              status: res.status,
+              message: 'Your password has been changed successfully'
+            });
+          } else {
+            transporter.sendMail(emailData);
+            return res.status(200).json({
+              status: res.status,
+              message: 'Your password has been changed successfully'
+            });
+          }
+        });
+      }
+    );
+  }
+
   /* attach route handlers to their endpoints */
   init(): void {
     this.router.get('/', this.getAll);
@@ -455,6 +514,7 @@ export default class UserRouter {
     this.router.post('/sign-in', this.signIn, requireLogin);
     this.router.post('/verify-email/:token', this.verifyEmail);
     this.router.post('/forgot-password', this.forgotPassword);
+    this.router.post('/reset-password/:token', this.resetPassword);
     this.router.put('/:id', this.updateById);
     this.router.delete('/:id', this.deleteById);
   }

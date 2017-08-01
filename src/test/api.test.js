@@ -391,7 +391,7 @@ describe('The API', () => {
   });
 
   /* User verify account */
-  describe('POST /api/users/verify-email/:token - verify users account to allow for use of the service', () => {
+  describe('POST /api/v1/users/verify-email/:token - verify users account to allow for use of the service', () => {
     it('should flip the isVerified prop on a users account', () => {
       return User.findOne().exec().then(userObject => {
         const { confirmationEmailToken } = userObject;
@@ -424,7 +424,7 @@ describe('The API', () => {
   });
 
   /* Forgot password handler */
-  describe('POST /api/v1/forgot-password - handle sending forgot password email', () => {
+  describe('POST /api/v1/users/forgot-password - handle sending forgot password email', () => {
     it('should set a reset token on the users account', () => {
       return User.findOne().exec().then(userObject => {
         const initialToken = userObject.resetPasswordToken;
@@ -502,6 +502,69 @@ describe('The API', () => {
           validationMsg.should.be.an('object');
           validationMsg.messages.should.be.a('string');
         });
+    });
+  });
+
+  /* Reset password handler */
+  describe('POST /api/v1/users/reset-password/:token - handle setting new password and resetting reset tokens', () => {
+    it('should allow existing users to reset their password', () => {
+      return User.findOne().exec().then(userObject => {
+        const { email } = userObject;
+        return chai
+          .request(app)
+          .post('/api/v1/users/forgot-password')
+          .send({ email })
+          .then(res => {
+            res.should.exist;
+            res.should.be.json;
+            res.status.should.equal(200);
+            const userResetToken = res.body.resetToken;
+            return userResetToken;
+          })
+          .then(userResetToken => {
+            return chai
+              .request(app)
+              .post(`/api/v1/users/reset-password/${userResetToken}`)
+              .send({ password: 'superSecretNewPassword' })
+              .then(res => {
+                res.should.exist;
+                res.should.be.json;
+                res.status.should.equal(200);
+              });
+          });
+      });
+    });
+    it("should return an error if the token doesn't match an existing user", () => {
+      return User.findOne().exec().then(userObject => {
+        const { email } = userObject;
+        return chai
+          .request(app)
+          .post('/api/v1/users/forgot-password')
+          .send({ email })
+          .then(res => {
+            res.should.exist;
+            res.should.be.json;
+            res.status.should.equal(200);
+            const userResetToken = res.body.resetToken + 'asdjfks';
+            return userResetToken;
+          })
+          .then(userResetToken => {
+            return chai
+              .request(app)
+              .post(`/api/v1/users/reset-password/${userResetToken}`)
+              .send({ password: 'altSecretPassword' })
+              .then(res => {
+                res.should.exist;
+                res.status.should.equal(422);
+              })
+              .catch(err => {
+                err.should.exist;
+                err.status.should.equal(422);
+                const errorMsg = JSON.parse(err.response.error.text);
+                errorMsg.message.should.be.a('string');
+              });
+          });
+      });
     });
   });
 });
