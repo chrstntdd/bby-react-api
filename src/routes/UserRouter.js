@@ -40,9 +40,9 @@ const requireLogin = passport.authenticate('local', { session: false });
 
 export default class UserRouter {
   router: Router;
-  path: String;
+  path: String | string;
 
-  constructor(path = '/api/v1/users') {
+  constructor(path: String | string = '/api/v1/users') {
     this.router = Router();
     this.path = path;
     this.init();
@@ -359,7 +359,6 @@ export default class UserRouter {
               token: `JWT ${generateJWT(userInfo)}`,
               user: userInfo
             });
-            next();
           });
         }
       }
@@ -434,19 +433,20 @@ export default class UserRouter {
                 'Thank you. Please check your work email for a message containing the link to reset your password.'
             });
           } else {
+            transporter.sendMail(emailData);
             return res.status(200).json({
               status: res.status,
               resetToken,
               message:
                 'Thank you. Please check your work email for a message containing the link to reset your password.'
             });
-            transporter.sendMail(emailData);
           }
         });
       });
     });
   }
 
+  /* reset password handler for existing users */
   resetPassword(req: $Request, res: $Response, next: $NextFunction): void {
     User.findOne(
       {

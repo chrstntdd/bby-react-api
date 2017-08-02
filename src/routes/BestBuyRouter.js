@@ -12,9 +12,9 @@ const requireAuth = passport.authenticate('jwt', { session: false });
 
 export default class BestBuyRouter {
   router: Router;
-  path: String;
+  path: String | string;
 
-  constructor(path = '/api/v1/best-buy') {
+  constructor(path: String | string = '/api/v1/best-buy') {
     this.router = Router();
     this.path = path;
     this.init();
