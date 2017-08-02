@@ -11,10 +11,11 @@ import type { $Request, $Response, $NextFunction, $Application } from 'express';
 /* import all routers */
 import UserRouter from './routes/UserRouter';
 import BestBuyRouter from './routes/BestBuyRouter';
+import TableRouter from './routes/TableRouter';
 
 export default class Api {
   /* annotate with the express $Application type */
-  express: express$Application;
+  express: $Application;
 
   /* create the express instance and attach app level middleware and routes */
   constructor() {
@@ -47,12 +48,14 @@ export default class Api {
 
   /* connect resource routers */
   routes(): void {
-    /* create an instance of the user router */
+    /* create an instance of the each of our routers */
     const userRouter = new UserRouter();
     const bestBuyRouter = new BestBuyRouter();
+    const tableRouter = new TableRouter();
 
-    /* attach the user router to our express app */
+    /* attach all routers to our express app */
     this.express.use(userRouter.path, userRouter.router);
     this.express.use(bestBuyRouter.path, bestBuyRouter.router);
+    this.express.use(tableRouter.path, tableRouter.router);
   }
 }
