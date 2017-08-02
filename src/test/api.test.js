@@ -17,7 +17,7 @@ chai.use(chaiHttp);
 process.env.NODE_ENV = 'test';
 
 const { generateNewUser } = require('../../generateTestData');
-const { runServer, closeServer } = require('../altindex');
+const { runServer, closeServer } = require('../index');
 const { User } = require('../models/user');
 const TEST_DATABASE_URL = process.env.TEST_DATABASE_URL;
 
@@ -408,7 +408,7 @@ describe('The API', () => {
           });
       });
     });
-    it("should return an error message if the confirmation token isnt tied to an existing user's account", () => {
+    it("should return an error message if the confirmation token isn't tied to an existing user's account", () => {
       return chai
         .request(app)
         .post(`/api/v1/users/verify-email/9bB9zLmc23G2EF5p`)

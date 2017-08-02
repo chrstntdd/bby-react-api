@@ -8,8 +8,8 @@
     "node": "8.2.1"
   },
   "scripts": {
-    "start": "node lib/altindex.js",
-    "watch": "nodemon lib/altindex.js",
+    "start": "node lib/index.js",
+    "watch": "nodemon lib/index.js",
     "build": "babel src/ -d lib/",
     "genData": "node -e 'require(\"./generateTestData.js\").writeFileToDisk()'",
     "test": "mocha --compilers js:babel-core/register ./src/test -c --timeout 10000 ",

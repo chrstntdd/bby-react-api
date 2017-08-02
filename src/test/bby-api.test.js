@@ -12,7 +12,7 @@ const should = chai.should();
 chai.use(chaiHttp);
 process.env.NODE_ENV = 'test';
 
-const { runServer, closeServer } = require('../altindex');
+const { runServer, closeServer } = require('../index');
 const { Table } = require('../models/table');
 const TEST_DATABASE_URL = process.env.TEST_DATABASE_URL;
 
