@@ -1,6 +1,5 @@
-import 'babel-polyfill';
 require('dotenv').config();
-import Api from '../Api';
+import Api from '../src/Api';
 
 const app = new Api().express;
 
@@ -10,15 +9,15 @@ const mongoose = require('mongoose');
 const should = chai.should();
 
 /* this is fake array of 5 users with a full profile */
-const testData = require('../../testdata.json');
+const testData = require('../testdata.json');
 
 chai.use(chaiHttp);
 
 process.env.NODE_ENV = 'test';
 
-const { generateNewUser } = require('../../generateTestData');
-const { runServer, closeServer } = require('../index');
-const { User } = require('../models/user');
+import { generateNewUser } from '../generateTestData.js';
+import { runServer, closeServer } from '../src/index';
+import User = require('../src/models/user');
 const TEST_DATABASE_URL = process.env.TEST_DATABASE_URL;
 
 const seedUsers = testData => {
@@ -220,18 +219,17 @@ describe('The API', () => {
   describe('DELETE /api/v1/users/:id - delete a user by id params', () => {
     it('should delete that the user with the requested id', () => {
       return User.findOne().exec().then(userObject => {
-        let formerUser = userObject;
         return chai
           .request(app)
-          .del(`/api/v1/users/${formerUser.id}`)
+          .del(`/api/v1/users/${userObject.id}`)
           .then(res => {
             res.status.should.equal(202);
             res.should.be.json;
             res.body.should.contain.keys('message');
-            return User.findById(formerUser.id).exec();
+            return User.findById(userObject.id).exec();
           })
-          .then(_formerUser => {
-            should.not.exist(_formerUser);
+          .then(_userObject => {
+            should.not.exist(_userObject);
           });
       });
     });
@@ -256,6 +254,7 @@ describe('The API', () => {
   describe("PUT /api/v1/users:id - update a user's information by id params", () => {
     it('should update the fields specified in the query', () => {
       const dataToUpdate = {
+        id: '',
         profile: {
           firstName: 'Clarice',
           lastName: 'Thompson'
@@ -290,6 +289,7 @@ describe('The API', () => {
     it("should return an error if the user with the requested id doesn't exist", () => {
       const pathToNonExistentUser = '/api/v1/users/1460';
       const dataToUpdate = {
+        id: '',
         profile: {
           firstName: 'Clarice',
           lastName: 'Thompson'
@@ -317,7 +317,8 @@ describe('The API', () => {
       const dataToUpdate = {
         employeeNumber: '1075394',
         role: 'Admin',
-        isVerified: true
+        isVerified: true,
+        id: ''
       };
       return User.findOne().exec().then(userObject => {
         dataToUpdate.id = userObject.id;
