@@ -1,12 +1,8 @@
-// @flow
-
-import express from 'express';
-import morgan from 'morgan';
-import bodyParser from 'body-parser';
-import validator from 'express-validator';
-import helmet from 'helmet';
-
-import type { $Request, $Response, $NextFunction, $Application } from 'express';
+import * as express from 'express';
+import * as morgan from 'morgan';
+import * as bodyParser from 'body-parser';
+import * as helmet from 'helmet';
+import validator = require('express-validator');
 
 /* import all routers */
 import UserRouter from './routes/UserRouter';
@@ -14,8 +10,8 @@ import BestBuyRouter from './routes/BestBuyRouter';
 import TableRouter from './routes/TableRouter';
 
 export default class Api {
-  /* annotate with the express $Application type */
-  express: $Application;
+  /* reference to the express instance */
+  public express: express.Application;
 
   /* create the express instance and attach app level middleware and routes */
   constructor() {
@@ -25,7 +21,7 @@ export default class Api {
   }
 
   /* apply middleware */
-  middleware(): void {
+  private middleware(): void {
     this.express.use((req, res, next) => {
       res.header('Access-Control-Allow-Origin', '*');
       res.header(
@@ -47,7 +43,7 @@ export default class Api {
   }
 
   /* connect resource routers */
-  routes(): void {
+  private routes(): void {
     /* create an instance of the each of our routers */
     const userRouter = new UserRouter();
     const bestBuyRouter = new BestBuyRouter();

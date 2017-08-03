@@ -1,13 +1,13 @@
-// @flow
-
 require('dotenv').config();
 
-import type { $Request, $Response, $NextFunction } from 'express';
-import { Router } from 'express';
-import { User } from '../models/user';
+import { Router, Request, Response, NextFunction } from 'express';
+import User = require('../models/user');
 import { sign } from 'jsonwebtoken';
 import { randomBytes } from 'crypto';
 import { createTransport } from 'nodemailer';
+
+/* Interfaces */
+import { IError, MappedError } from '../interfaces/index';
 
 /* Constants */
 const JWT_SECRET = process.env.JWT_SECRET;
@@ -35,14 +35,14 @@ const requireLogin = passport.authenticate('local', { session: false });
 /* 
 *
 * Main user router class
-*
+* @path = /api/v1/users
 */
 
 export default class UserRouter {
   router: Router;
-  path: String | string;
+  path: any;
 
-  constructor(path: String | string = '/api/v1/users') {
+  constructor(path = '/api/v1/users') {
     this.router = Router();
     this.path = path;
     this.init();
@@ -54,7 +54,7 @@ export default class UserRouter {
   */
 
   /* return all users */
-  getAll(req: $Request, res: $Response): void {
+  public getAll(req: Request, res: Response): void {
     User.find()
       .then(res => {
         const users = res;
@@ -70,7 +70,7 @@ export default class UserRouter {
   }
 
   /* get single user by id */
-  getById(req: $Request, res: $Response): void {
+  public getById(req: Request, res: Response): void {
     User.findById(req.params.id)
       .then(res => {
         const user = res;
@@ -87,7 +87,7 @@ export default class UserRouter {
   }
 
   /* Sign in handler*/
-  signIn(req: $Request, res: $Response, next: $NextFunction): void {
+  public signIn(req: Request, res: Response, next: NextFunction): void {
     /* Sanitize and validate input */
     req.checkBody('email', 'Please enter a valid email address').isEmail();
     req.checkBody('email', 'Please enter an email').notEmpty();
@@ -96,7 +96,7 @@ export default class UserRouter {
     req.sanitizeBody('email').trim();
 
     /* Assign valid and sanitized input to a variable for use */
-    const email = req.body.email;
+    const email: string = req.body.email;
 
     /* Accumulate errors in result and return errors if so */
     req.getValidationResult().then(result => {
@@ -126,7 +126,7 @@ export default class UserRouter {
   }
 
   /* create a new user (Register) */
-  createNew(req: $Request, res: $Response, next: $NextFunction): void {
+  public createNew(req: Request, res: Response, next: NextFunction): void {
     /* Validation stack. Prepare yourself */
     /* No need to validate the email since it's generated on the server from the employee number */
 
@@ -273,9 +273,15 @@ export default class UserRouter {
   }
 
   /* delete an existing user by the id params */
-  deleteById(req: $Request, res: $Response): void {
+  public deleteById(req: Request, res: Response): void {
     User.findByIdAndRemove(req.params.id)
       .then(userObject => {
+        if (userObject == null) {
+          return res.status(400).json({
+            status: res.status,
+            message: 'There was an error my mans'
+          });
+        }
         res.status(202).json({
           status: res.status,
           message: `${userObject.profile.firstName} ${userObject.profile
@@ -291,7 +297,7 @@ export default class UserRouter {
   }
 
   /* update an existing user by the id params */
-  updateById(req: $Request, res: $Response): void {
+  public updateById(req: Request, res: Response): void {
     const updated = {};
     const mutableFields = ['profile', 'storeNumber', 'password'];
     const immutableFields = [
@@ -325,6 +331,12 @@ export default class UserRouter {
     User.findByIdAndUpdate(req.params.id, { $set: updated }, { new: true })
       .exec()
       .then(userObject => {
+        if (userObject == null) {
+          return res.status(404).json({
+            status: res.status,
+            message: 'Whom are you looking for anyway my guy?'
+          });
+        }
         res.status(201).json({
           status: res.status,
           message: `${userObject.profile.firstName} ${userObject.profile
@@ -340,7 +352,7 @@ export default class UserRouter {
   }
 
   /* verify an existing users account */
-  verifyEmail(req: $Request, res: $Response, next: $NextFunction): void {
+  public verifyEmail(req: Request, res: Response, next: NextFunction): void {
     User.findOne(
       { confirmationEmailToken: req.params.token },
       (err, existingUser) => {
@@ -366,7 +378,7 @@ export default class UserRouter {
   }
 
   /* forgot password handler for existing users */
-  forgotPassword(req: $Request, res: $Response, next: $NextFunction): void {
+  public forgotPassword(req: Request, res: Response, next: NextFunction): void {
     /* Sanitize and validate input */
     req.checkBody('email', 'Please enter a valid email address').isEmail();
     req.checkBody('email', 'Please enter an email').notEmpty();
@@ -375,9 +387,9 @@ export default class UserRouter {
     req.sanitizeBody('email').trim();
 
     /* Assign valid and sanitized input to a variable for use */
-    const email = req.body.email;
+    const email: string = req.body.email;
 
-    const errors = { status: 406, messages: [] };
+    const errors: IError = { status: 406, messages: [] };
 
     /* Accumulate errors in result and return errors if so */
     req.getValidationResult().then(result => {
@@ -447,7 +459,7 @@ export default class UserRouter {
   }
 
   /* reset password handler for existing users */
-  resetPassword(req: $Request, res: $Response, next: $NextFunction): void {
+  public resetPassword(req: Request, res: Response, next: NextFunction): void {
     User.findOne(
       {
         resetPasswordToken: req.params.token,

@@ -1,6 +1,18 @@
-const mongoose = require('mongoose');
+import { Schema } from 'mongoose';
 
-const productSchema = mongoose.Schema({
+export interface IProduct {
+  name: string;
+  sku: number;
+  department: string;
+  departmentId: string;
+  modelNumber: string;
+  classId: number;
+  value: number;
+  quantity: number;
+  totalValue: number;
+}
+
+export const ProductSchema = new Schema({
   name: {
     type: String
   },
@@ -30,6 +42,4 @@ const productSchema = mongoose.Schema({
   }
 });
 
-module.exports = {
-  productSchema
-};
+export default ProductSchema;

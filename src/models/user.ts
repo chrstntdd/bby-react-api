@@ -1,11 +1,32 @@
-const mongoose = require('mongoose');
-const Schema = mongoose.Schema;
-const bcrypt = require('bcrypt-nodejs');
-const { tableSchema } = require('./table');
+import * as mongoose from 'mongoose';
+import * as bcrypt from 'bcrypt-nodejs';
+import Table = require('./table');
+import { ITable, TableSchema } from './table';
 
-// USER SCHEMA
+interface IUser {
+  email: string;
+  password: string;
+  profile: {
+    firstName: string;
+    lastName: string;
+  };
+  employeeNumber: String;
+  storeNumber: Number;
+  role: string;
+  resetPasswordToken: string | undefined;
+  resetPasswordExpires: Date | number | undefined;
+  confirmationEmailToken: string;
+  isVerified: boolean;
+  tableData: {
+    tableMetadata: string;
+    tables: ITable[];
+  };
+}
 
-const UserSchema = new Schema(
+interface IUserModel extends IUser, mongoose.Document {}
+
+/* User schema */
+const UserSchema = new mongoose.Schema(
   {
     email: {
       type: String,
@@ -49,7 +70,10 @@ const UserSchema = new Schema(
       type: Boolean,
       default: false
     },
-    tableData: [tableSchema]
+    tableData: {
+      tableMetadata: { type: String },
+      tables: [TableSchema]
+    }
   },
   {
     timestamps: true
@@ -87,6 +111,6 @@ UserSchema.methods.comparePassword = function(inputPassword, callback) {
   });
 };
 
-const User = mongoose.model('User', UserSchema);
+const User = mongoose.model<IUserModel>('User', UserSchema);
 
-module.exports = { User };
+export = User;

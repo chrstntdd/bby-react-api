@@ -1,6 +1,7 @@
-// @flow
-import type { $Request, $Response, $NextFunction } from 'express';
+import { Request, Response, NextFunction } from 'express';
 import { Router } from 'express';
+
+import { IError, MappedError } from '../interfaces/index';
 
 const bby = require('bestbuy')(process.env.BBY_API_KEY);
 
@@ -12,9 +13,9 @@ const requireAuth = passport.authenticate('jwt', { session: false });
 
 export default class BestBuyRouter {
   router: Router;
-  path: String | string;
+  path: any;
 
-  constructor(path: String | string = '/api/v1/best-buy') {
+  constructor(path: any = '/api/v1/best-buy') {
     this.router = Router();
     this.path = path;
     this.init();
@@ -24,7 +25,7 @@ export default class BestBuyRouter {
   /* ALL requests require a valid JWT */
 
   /* Get product details by UPC */
-  getByUPC(req: $Request, res: $Response): void {
+  public getByUPC(req: Request, res: Response): void {
     /* Validation and sanitization 👏  */
     req.checkBody('upc', 'UPC must not be empty').notEmpty();
     req
@@ -33,17 +34,18 @@ export default class BestBuyRouter {
         "Looks like you didn't scan the right bar code. Please make sure you scan the UPC label"
       )
       .isNumeric()
-      .isInt({ allow_leading_zeros: true })
+      .isInt({ allow_leading_zeroes: true })
       .isLength({ min: 12, max: 12 });
 
     req.sanitizeBody('upc').trim();
     req.sanitizeBody('upc').escape();
 
     /* Assign validated and sanitized UPC to variable */
-    const upc = req.body.upc;
+    const upc: string = req.body.upc;
 
     /* Accumulate validation errors onto object */
-    const errors = { status: 406, messages: [] };
+    const errors: IError = { status: 406, messages: [] };
+
     req.getValidationResult().then(result => {
       if (!result.isEmpty()) {
         errors.messages = result.array();

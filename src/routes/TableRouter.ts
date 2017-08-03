@@ -1,8 +1,7 @@
-// @flow
-
-import type { $Request, $Response, $NextFunction } from 'express';
+import { Request, Response, NextFunction } from 'express';
 import { Router } from 'express';
-import { Table } from '../models/table';
+import Table = require('../models/table');
+import User = require('../models/user');
 
 /* Passport middleware */
 const passport = require('passport');
@@ -12,31 +11,31 @@ const requireAuth = passport.authenticate('jwt', { session: false });
 
 export default class TableRouter {
   router: Router;
-  path: String | string;
+  path: any;
 
-  constructor(path: String | string = '/api/v1/tables') {
+  constructor(path = '/api/v1/tables') {
     this.router = Router();
     this.path = path;
     this.init();
   }
 
-  getAll(req: $Request, res: $Response, next: $NextFunction): void {
+  getAll(req: Request, res: Response, next: NextFunction): void {
+    const userId = req.body.userId;
+  }
+
+  getById(req: Request, res: Response, next: NextFunction): void {
     /* stubbed */
   }
 
-  getById(req: $Request, res: $Response, next: $NextFunction): void {
+  createNew(req: Request, res: Response, next: NextFunction): void {
     /* stubbed */
   }
 
-  createNew(req: $Request, res: $Response, next: $NextFunction): void {
+  updateById(req: Request, res: Response, next: NextFunction): void {
     /* stubbed */
   }
 
-  updateById(req: $Request, res: $Response, next: $NextFunction): void {
-    /* stubbed */
-  }
-
-  deleteById(req: $Request, res: $Response, next: $NextFunction): void {
+  deleteById(req: Request, res: Response, next: NextFunction): void {
     /* stubbed */
   }
 
