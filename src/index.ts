@@ -16,11 +16,11 @@ let server;
 
 // TAKES A DATABASE URL AS AN ARGUMENT. NEEDED FOR INTEGRATION TESTS. DEFAULTS TO THE MAIN URL.
 export const runServer = (
-  databaseUrl: string | undefined = DATABASE_URL,
+  databaseUrl: string = DATABASE_URL,
   port: number | string = PORT
 ) =>
   new Promise((resolve, reject) => {
-    mongoose.connect(databaseUrl, { useMongoClient: true }, err => {
+    mongoose.connect(databaseUrl, err => {
       if (err) return reject(err);
 
       server = app.express
