@@ -2,6 +2,5 @@
 node_modules
 .fusebox
 dist/
-lib
 .vscode
 testdata.json
