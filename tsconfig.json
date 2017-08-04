@@ -8,7 +8,20 @@
     "sourceMap": true,
     "target": "es6",
     "module": "commonjs",
-    "outDir": "./lib"
+    "outDir": "./lib",
+    "types": [
+      "body-parser",
+      "mongodb",
+      "mongoose",
+      "passport",
+      "node",
+      "mocha",
+      "chai",
+      "express",
+      "express-validator",
+      "chai-http"
+    ],
+    "typeRoots": ["./node_modules/@types"]
   },
   "compileOnSave": true,
   "include": ["src/**/*.ts"],

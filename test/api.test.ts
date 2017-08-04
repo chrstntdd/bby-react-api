@@ -6,6 +6,7 @@ const app = new Api().express;
 const chai = require('chai');
 const chaiHttp = require('chai-http');
 const mongoose = require('mongoose');
+const morgan = require('morgan');
 const should = chai.should();
 
 /* this is fake array of 5 users with a full profile */
@@ -31,7 +32,7 @@ describe('The API', () => {
   beforeEach(() => seedUsers(testData));
   afterEach(() => tearDownDb());
   after(() => closeServer());
-  let expectedProps = [
+  const expectedProps = [
     '__v',
     'updatedAt',
     'createdAt',
@@ -48,6 +49,7 @@ describe('The API', () => {
     'isVerified',
     'tableData'
   ];
+
   /* Get all users */
   describe('GET /api/v1/users - get all users', () => {
     it('should return a JSON array', () => {
@@ -69,7 +71,7 @@ describe('The API', () => {
     it("shouldn't return a user object with extra props", () => {
       return chai.request(app).get('/api/v1/users').then(res => {
         const user = res.body[0];
-        let extraProps = Object.keys(user).filter(key => {
+        const extraProps = Object.keys(user).filter(key => {
           return !expectedProps.includes(key);
         });
         extraProps.length.should.equal(0);
@@ -235,7 +237,7 @@ describe('The API', () => {
     });
     it("should return an error if the user with the requested id doesn't  exist", () => {
       return User.findOne().exec().then(userObject => {
-        let pathToNonExistentUser = '/api/v1/users/1337';
+        const pathToNonExistentUser = '/api/v1/users/1337';
         return chai
           .request(app)
           .del(pathToNonExistentUser)
@@ -568,4 +570,51 @@ describe('The API', () => {
       });
     });
   });
+});
+
+describe('Fetching tables', () => {
+  before(() => runServer(TEST_DATABASE_URL));
+  beforeEach(() => seedUsers(testData));
+  afterEach(() => tearDownDb());
+  after(() => closeServer());
+
+  /* get all tables for a user */
+  describe('GET /api/v1/tables/:userId - get all tables for the user supplied in the req params', () => {
+    it('should return back all tables for an existing user', () => {
+      let userId;
+      return User.findOne().exec().then(user => {
+        userId = user.id;
+        return chai.request(app).get(`/api/v1/tables/${userId}`).then(res => {
+          res.should.exist;
+          res.should.be.json;
+          res.status.should.equal(200);
+          res.body.should.be.an('array');
+          res.body.should.have.length.above(0);
+        });
+      });
+    });
+  });
+  describe.only(
+    'GET /api/v1/tables/:userId/:tableId - return a table for the user specified by the req params',
+    () => {
+      it('should return back a single table that matches the url params', () => {
+        let userId;
+        let tableId;
+        return User.findOne().exec().then(userObject => {
+          console.log(`here in the tests ${userObject}`);
+          userId = userObject.id;
+          tableId = userObject.tableData.tables[0].id;
+          return chai
+            .request(app)
+            .get(`/api/v1/tables/${userId}/${tableId}`)
+            .then(res => {
+              // console.log(`HEre in the test ${res.body}`);
+              res.should.exist;
+              res.should.be.json;
+              res.status.should.equal(200);
+            });
+        });
+      });
+    }
+  );
 });

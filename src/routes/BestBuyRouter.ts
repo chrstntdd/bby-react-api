@@ -1,5 +1,4 @@
-import { Request, Response, NextFunction } from 'express';
-import { Router } from 'express';
+import { Request, Response, NextFunction, Router } from 'express';
 
 import { IError, MappedError } from '../interfaces/index';
 
@@ -67,9 +66,9 @@ export default class BestBuyRouter {
         });
       } else {
         /* Success */
-        let product = data.products[0];
+        const product = data.products[0];
 
-        let productDetails = {
+        const productDetails = {
           name: product.name,
           sku: product.sku,
           upc: product.upc,

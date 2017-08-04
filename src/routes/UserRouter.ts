@@ -54,7 +54,7 @@ export default class UserRouter {
   */
 
   /* return all users */
-  public getAll(req: Request, res: Response): void {
+  public getAll(req: Request, res: Response, next?: NextFunction): void {
     User.find()
       .then(res => {
         const users = res;
@@ -70,7 +70,7 @@ export default class UserRouter {
   }
 
   /* get single user by id */
-  public getById(req: Request, res: Response): void {
+  public getById(req: Request, res: Response, next?: NextFunction): void {
     User.findById(req.params.id)
       .then(res => {
         const user = res;
@@ -87,7 +87,7 @@ export default class UserRouter {
   }
 
   /* Sign in handler*/
-  public signIn(req: Request, res: Response, next: NextFunction): void {
+  public signIn(req: Request, res: Response, next?: NextFunction): void {
     /* Sanitize and validate input */
     req.checkBody('email', 'Please enter a valid email address').isEmail();
     req.checkBody('email', 'Please enter an email').notEmpty();
@@ -126,7 +126,7 @@ export default class UserRouter {
   }
 
   /* create a new user (Register) */
-  public createNew(req: Request, res: Response, next: NextFunction): void {
+  public createNew(req: Request, res: Response, next?: NextFunction): void {
     /* Validation stack. Prepare yourself */
     /* No need to validate the email since it's generated on the server from the employee number */
 
@@ -225,7 +225,7 @@ export default class UserRouter {
         }
         const verifyToken = buffer.toString('hex');
         /* create a new user since an existing one wasn't found */
-        let user = new User({
+        const user = new User({
           email,
           password,
           confirmationEmailToken: verifyToken,
@@ -273,7 +273,7 @@ export default class UserRouter {
   }
 
   /* delete an existing user by the id params */
-  public deleteById(req: Request, res: Response): void {
+  public deleteById(req: Request, res: Response, next?: NextFunction): void {
     User.findByIdAndRemove(req.params.id)
       .then(userObject => {
         if (userObject == null) {
@@ -297,7 +297,7 @@ export default class UserRouter {
   }
 
   /* update an existing user by the id params */
-  public updateById(req: Request, res: Response): void {
+  public updateById(req: Request, res: Response, next?: NextFunction): void {
     const updated = {};
     const mutableFields = ['profile', 'storeNumber', 'password'];
     const immutableFields = [
@@ -352,7 +352,7 @@ export default class UserRouter {
   }
 
   /* verify an existing users account */
-  public verifyEmail(req: Request, res: Response, next: NextFunction): void {
+  public verifyEmail(req: Request, res: Response, next?: NextFunction): void {
     User.findOne(
       { confirmationEmailToken: req.params.token },
       (err, existingUser) => {
@@ -378,7 +378,11 @@ export default class UserRouter {
   }
 
   /* forgot password handler for existing users */
-  public forgotPassword(req: Request, res: Response, next: NextFunction): void {
+  public forgotPassword(
+    req: Request,
+    res: Response,
+    next?: NextFunction
+  ): void {
     /* Sanitize and validate input */
     req.checkBody('email', 'Please enter a valid email address').isEmail();
     req.checkBody('email', 'Please enter an email').notEmpty();
@@ -459,7 +463,7 @@ export default class UserRouter {
   }
 
   /* reset password handler for existing users */
-  public resetPassword(req: Request, res: Response, next: NextFunction): void {
+  public resetPassword(req: Request, res: Response, next?: NextFunction): void {
     User.findOne(
       {
         resetPasswordToken: req.params.token,
@@ -519,7 +523,7 @@ export default class UserRouter {
   }
 
   /* attach route handlers to their endpoints */
-  init(): void {
+  private init(): void {
     this.router.get('/', this.getAll);
     this.router.get('/:id', this.getById);
     this.router.post('/', this.createNew);

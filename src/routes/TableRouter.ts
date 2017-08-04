@@ -1,6 +1,5 @@
-import { Request, Response, NextFunction } from 'express';
-import { Router } from 'express';
-import Table = require('../models/table');
+import { Request, Response, Router, NextFunction } from 'express';
+import Table from '../models/table';
 import User = require('../models/user');
 
 /* Passport middleware */
@@ -10,8 +9,8 @@ const passportService = require('../config/passport');
 const requireAuth = passport.authenticate('jwt', { session: false });
 
 export default class TableRouter {
-  router: Router;
-  path: any;
+  public router: Router;
+  public path: any;
 
   constructor(path = '/api/v1/tables') {
     this.router = Router();
@@ -19,29 +18,44 @@ export default class TableRouter {
     this.init();
   }
 
-  getAll(req: Request, res: Response, next: NextFunction): void {
-    const userId = req.body.userId;
+  public getAll(req: Request, res: Response, next?: NextFunction): void {
+    User.findById(req.params.userId)
+      .then(user => {
+        res.status(200).json(user.tableData.tables);
+      })
+      .catch(err => {
+        res.status(500).json({ message: 'Big man ting there was an error' });
+      });
   }
 
-  getById(req: Request, res: Response, next: NextFunction): void {
+  public getById(req: Request, res: Response, next?: NextFunction): void {
+    User.findById(req.params.userId)
+      .then(user => {
+        const requestedTable = user.tableData.tables.filter(
+          table => table._id === req.params.tableId
+        );
+        res.status(200).json(requestedTable);
+      })
+      .catch(err => {
+        res.status(500).json({ message: 'There was an error my guy' });
+      });
+  }
+
+  public createNew(req: Request, res: Response, next?: NextFunction): void {
     /* stubbed */
   }
 
-  createNew(req: Request, res: Response, next: NextFunction): void {
+  public updateById(req: Request, res: Response, next?: NextFunction): void {
     /* stubbed */
   }
 
-  updateById(req: Request, res: Response, next: NextFunction): void {
+  public deleteById(req: Request, res: Response, next?: NextFunction): void {
     /* stubbed */
   }
 
-  deleteById(req: Request, res: Response, next: NextFunction): void {
-    /* stubbed */
-  }
-
-  init(): void {
-    this.router.get('/', this.getAll);
-    this.router.get('/id', this.getById);
+  public init(): void {
+    this.router.get('/:userId', this.getAll);
+    this.router.get('/:userId/:tableId', this.getById);
     this.router.post('/', this.createNew);
     this.router.put('/:id', this.updateById);
     this.router.delete('/:id', this.deleteById);

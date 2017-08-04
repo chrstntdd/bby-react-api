@@ -3,11 +3,12 @@ import Product = require('./product');
 import { IProduct, ProductSchema } from './product';
 
 export interface ITable {
+  id: string;
   createdOn: Date;
   products: IProduct[];
 }
 
-interface ITableModel extends ITable, mongoose.Document {}
+// interface ITableModel extends ITable, mongoose.Document {}
 
 export const TableSchema = new mongoose.Schema({
   createdOn: {
@@ -16,6 +17,6 @@ export const TableSchema = new mongoose.Schema({
   products: [ProductSchema]
 });
 
-const Table = mongoose.model<ITableModel>('Table', TableSchema);
+const Table = mongoose.model('Table', TableSchema);
 
 export default Table;

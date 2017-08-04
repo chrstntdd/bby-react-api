@@ -2,7 +2,7 @@ import * as express from 'express';
 import * as morgan from 'morgan';
 import * as bodyParser from 'body-parser';
 import * as helmet from 'helmet';
-import validator = require('express-validator');
+import expressValidator = require('express-validator');
 
 /* import all routers */
 import UserRouter from './routes/UserRouter';
@@ -39,7 +39,7 @@ export default class Api {
     this.express.use(morgan('dev'));
     this.express.use(bodyParser.json());
     this.express.use(bodyParser.urlencoded({ extended: false }));
-    this.express.use(validator());
+    this.express.use(expressValidator());
   }
 
   /* connect resource routers */

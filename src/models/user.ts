@@ -19,7 +19,7 @@ interface IUser {
   isVerified: boolean;
   tableData: {
     tableMetadata: string;
-    tables: ITable[];
+    tables: any;
   };
 }
 
