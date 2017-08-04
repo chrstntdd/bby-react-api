@@ -1,10 +1,11 @@
 require('dotenv').config();
+require('dotenv').load();
 
 import Api from './Api';
 const mongoose = require('mongoose');
 
-const DATABASE_URL = process.env.PRODUCTION_DB_URL;
-const PORT = process.env.PRODUCTION_DB_PORT || 3000;
+const DATABASE_URL = process.env.MONGODB_URI;
+const PORT = process.env.PORT || 3000;
 const JWT_SECRET = process.env.JWT_SECRET;
 
 /* instantiate nre app instance */
