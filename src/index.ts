@@ -21,7 +21,7 @@ export const runServer = (
   port: number | string = PORT
 ) =>
   new Promise((resolve, reject) => {
-    mongoose.connect(databaseUrl, err => {
+    mongoose.connect(databaseUrl, { useMongoClient: true }, err => {
       if (err) return reject(err);
 
       server = app.express
