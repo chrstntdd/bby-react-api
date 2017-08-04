@@ -594,27 +594,24 @@ describe('Fetching tables', () => {
       });
     });
   });
-  describe.only(
-    'GET /api/v1/tables/:userId/:tableId - return a table for the user specified by the req params',
-    () => {
-      it('should return back a single table that matches the url params', () => {
-        let userId;
-        let tableId;
-        return User.findOne().exec().then(userObject => {
-          console.log(`here in the tests ${userObject}`);
-          userId = userObject.id;
-          tableId = userObject.tableData.tables[0].id;
-          return chai
-            .request(app)
-            .get(`/api/v1/tables/${userId}/${tableId}`)
-            .then(res => {
-              // console.log(`HEre in the test ${res.body}`);
-              res.should.exist;
-              res.should.be.json;
-              res.status.should.equal(200);
-            });
-        });
+  describe('GET /api/v1/tables/:userId/:tableId - return a table for the user specified by the req params', () => {
+    it('should return back a single table that matches the url params', () => {
+      let userId;
+      let tableId;
+      return User.findOne().exec().then(userObject => {
+        console.log(`here in the tests ${userObject}`);
+        userId = userObject.id;
+        tableId = userObject.tableData.tables[0].id;
+        return chai
+          .request(app)
+          .get(`/api/v1/tables/${userId}/${tableId}`)
+          .then(res => {
+            // console.log(`HEre in the test ${res.body}`);
+            res.should.exist;
+            res.should.be.json;
+            res.status.should.equal(200);
+          });
       });
-    }
-  );
+    });
+  });
 });
