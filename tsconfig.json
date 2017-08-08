@@ -5,7 +5,7 @@
     "watch": true,
     "noImplicitAny": false,
     "removeComments": true,
-    "sourceMap": true,
+    "sourceMap": false,
     "target": "es6",
     "module": "commonjs",
     "outDir": "./lib",

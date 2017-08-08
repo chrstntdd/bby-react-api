@@ -227,11 +227,11 @@ export default class UserRouter {
         /* create a new user since an existing one wasn't found */
         const user = new User({
           email,
+          employeeNumber,
           password,
-          confirmationEmailToken: verifyToken,
-          profile: { firstName, lastName },
           storeNumber,
-          employeeNumber
+          confirmationEmailToken: verifyToken,
+          profile: { firstName, lastName }
         });
 
         user.save((err, user) => {
@@ -253,18 +253,18 @@ export default class UserRouter {
           /* don't send a confirmation email when testing, but return the same result */
           if (process.env.NODE_ENV === 'test') {
             return res.status(201).json({
+              user,
               message:
                 'Your account has been created, now please check your work email to confirm your account.',
-              status: res.status,
-              user
+              status: res.status
             });
           } else {
             transporter.sendMail(emailData);
             return res.status(201).json({
+              user,
               message:
                 'Your account has been created, now please check your work email to confirm your account.',
-              status: res.status,
-              user
+              status: res.status
             });
           }
         });
@@ -443,16 +443,16 @@ export default class UserRouter {
           /* don't send email when testing, but return the same result */
           if (process.env.NODE_ENV === 'test') {
             return res.status(200).json({
-              status: res.status,
               resetToken,
+              status: res.status,
               message:
                 'Thank you. Please check your work email for a message containing the link to reset your password.'
             });
           } else {
             transporter.sendMail(emailData);
             return res.status(200).json({
-              status: res.status,
               resetToken,
+              status: res.status,
               message:
                 'Thank you. Please check your work email for a message containing the link to reset your password.'
             });
