@@ -20,6 +20,11 @@ export default class Api {
     this.routes();
   }
 
+  /* get current environment */
+  public currentEnv(): string {
+    return this.express.get('env');
+  }
+
   /* apply middleware */
   private middleware(): void {
     this.express.use((req, res, next) => {

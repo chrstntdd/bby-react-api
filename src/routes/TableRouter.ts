@@ -18,6 +18,7 @@ export default class TableRouter {
     this.init();
   }
 
+  /* Get all tables for a given user */
   public getAll(req: Request, res: Response, next?: NextFunction): void {
     User.findById(req.params.userId)
       .then(user => {
@@ -27,37 +28,87 @@ export default class TableRouter {
         res.status(500).json({ message: 'Big man ting there was an error' });
       });
   }
-
+  /* Get a single table for a given user with a given tableId */
   public getById(req: Request, res: Response, next?: NextFunction): void {
     User.findById(req.params.userId)
       .then(user => {
-        const requestedTable = user.tableData.tables.filter(
-          table => table._id === req.params.tableId
-        );
+        const requestedTable = user.tableData.tables.id(req.params.tableId);
         res.status(200).json(requestedTable);
       })
       .catch(err => {
         res.status(500).json({ message: 'There was an error my guy' });
       });
   }
-
+  /* Create a new table for a given user */
   public createNew(req: Request, res: Response, next?: NextFunction): void {
-    /* stubbed */
+    User.findById(req.params.userId)
+      .then(user => {
+        const newTable = {
+          createdOn: Date.now(),
+          createdBy: req.params.userId
+        };
+        user.tableData.tables.push(newTable);
+        user.save();
+        return newTable;
+      })
+      .then(newTable => {
+        res.status(200).json(newTable);
+      })
+      .catch(err => {
+        res.status(500).json({ message: 'EVERYTHING IS ON FIRE' });
+      });
   }
 
+  /* handles updates to the table sent in by client. State is managed by redux, 
+   * but is persisted on the server with a call to PUT every so often(1 minute 
+   * or so) 
+   */
   public updateById(req: Request, res: Response, next?: NextFunction): void {
-    /* stubbed */
+    const currentTableState = req.body.products;
+    User.findOneAndUpdate(
+      { _id: req.params.userId, 'tableData.tables._id': req.params.tableId },
+      { $set: { 'tableData.tables.$.products': currentTableState } }
+    )
+      .then(updatedUser => {
+        res
+          .status(201)
+          .json(
+            `Successfully updated the table with the id of ${req.params
+              .tableId}`
+          );
+      })
+      .catch(err => {
+        res.status(500).json({
+          err,
+          message: 'I have no idea what the fuck is going on'
+        });
+      });
   }
 
+  /* Delete a single table for a given user with a given tableId */
   public deleteById(req: Request, res: Response, next?: NextFunction): void {
-    /* stubbed */
+    User.findById(req.params.userId)
+      .then(user => {
+        user.tableData.tables.id(req.params.tableId).remove();
+        user.save();
+      })
+      .then(response => {
+        res
+          .status(202)
+          .json(
+            `Successfully remove the table with the id of ${req.params.tableId}`
+          );
+      })
+      .catch(err => {
+        res.status(500).json('EVERYTHING IS BURING');
+      });
   }
 
   public init(): void {
     this.router.get('/:userId', this.getAll);
+    this.router.post('/:userId', this.createNew);
     this.router.get('/:userId/:tableId', this.getById);
-    this.router.post('/', this.createNew);
-    this.router.put('/:id', this.updateById);
-    this.router.delete('/:id', this.deleteById);
+    this.router.put('/:userId/:tableId', this.updateById);
+    this.router.delete('/:userId/:tableId', this.deleteById);
   }
 }

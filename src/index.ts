@@ -4,15 +4,26 @@ require('dotenv').load();
 import Api from './Api';
 const mongoose = require('mongoose');
 
-const DATABASE_URL = process.env.MONGODB_URI;
+/* Instantiate our app instance */
+const app: Api = new Api();
+
+/* Get current environment */
+const env = app.currentEnv();
+
+let DATABASE_URL;
+
+env === 'development'
+  ? (DATABASE_URL = process.env.DATABASE_URL)
+  : (DATABASE_URL = process.env.MONGODB_URI);
 const PORT = process.env.PORT || 3000;
 const JWT_SECRET = process.env.JWT_SECRET;
 
-/* instantiate nre app instance */
-const app: Api = new Api();
-
+/* Set mongoose promise to native ES6 promise */
 mongoose.Promise = global.Promise;
 
+/* Both runServer and closeServer need access to the server var,
+ * so it's declared outside of both function.
+ */
 let server;
 
 // TAKES A DATABASE URL AS AN ARGUMENT. NEEDED FOR INTEGRATION TESTS. DEFAULTS TO THE MAIN URL.
@@ -27,7 +38,7 @@ export const runServer = (
       server = app.express
         .listen(port, () => {
           console.info(
-            `Your server is listening on port ${port} with the db ${databaseUrl}🤔`
+            `Your server is listening on port ${port} with the db ${databaseUrl} in a ${env} environment🤔`
           );
           resolve();
         })
