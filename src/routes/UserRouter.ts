@@ -1,6 +1,7 @@
 require('dotenv').config();
 
 import { Router, Request, Response, NextFunction } from 'express';
+// tslint:disable-next-line:import-name
 import User = require('../models/user');
 import { sign } from 'jsonwebtoken';
 import { randomBytes } from 'crypto';

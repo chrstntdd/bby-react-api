@@ -27,17 +27,17 @@ export default class BestBuyRouter {
   /* Get product details by UPC */
   public getByUPC(req: Request, res: Response, next?: NextFunction): void {
     /* TODO. CHECK THAT THE REQUESTS ARE AUTHORIZED WITH A VALID JWT BEFORE ALLOWING USE OF THE ENDPOINT */
-    const token = req.headers.authorization;
+    // const token = req.headers.authorization;
 
-    if (token) {
-      verify(token, JWT_SECRET, (err, decoded) => {
-        if (err) {
-          res.status(420).json('unauthorized');
-        } else {
-          next();
-        }
-      });
-    }
+    // if (token) {
+    //   verify(token, JWT_SECRET, (err, decoded) => {
+    //     if (err) {
+    //       res.status(420).json('unauthorized');
+    //     } else {
+    //       next();
+    //     }
+    //   });
+    // }
 
     /* Validation and sanitization 👏  */
     req.checkBody('upc', 'UPC must not be empty').notEmpty();

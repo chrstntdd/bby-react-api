@@ -66,7 +66,7 @@ export default class TableRouter {
    * or so) 
    */
   public updateById(req: Request, res: Response, next?: NextFunction): void {
-    const currentTableState = req.body.products;
+    const currentTableState = req.body;
     User.findOneAndUpdate(
       { _id: req.params.userId, 'tableData.tables._id': req.params.tableId },
       { $set: { 'tableData.tables.$.products': currentTableState } }
