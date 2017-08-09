@@ -1,8 +1,9 @@
 import { Request, Response, NextFunction, Router } from 'express';
-
+import { verify } from 'jsonwebtoken';
 import { IError, MappedError } from '../interfaces/index';
 
 const bby = require('bestbuy')(process.env.BBY_API_KEY);
+const JWT_SECRET = process.env.JWT_SECRET;
 
 /* Passport middleware */
 const passport = require('passport');
@@ -24,7 +25,20 @@ export default class BestBuyRouter {
   /* ALL requests require a valid JWT */
 
   /* Get product details by UPC */
-  public getByUPC(req: Request, res: Response): void {
+  public getByUPC(req: Request, res: Response, next?: NextFunction): void {
+    /* TODO. CHECK THAT THE REQUESTS ARE AUTHORIZED WITH A VALID JWT BEFORE ALLOWING USE OF THE ENDPOINT */
+    const token = req.headers.authorization;
+
+    if (token) {
+      verify(token, JWT_SECRET, (err, decoded) => {
+        if (err) {
+          res.status(420).json('unauthorized');
+        } else {
+          next();
+        }
+      });
+    }
+
     /* Validation and sanitization 👏  */
     req.checkBody('upc', 'UPC must not be empty').notEmpty();
     req

@@ -18,6 +18,7 @@ const FROM_EMAIL = process.env.FROM_EMAIL;
 const generateJWT = user => sign(user, JWT_SECRET, { expiresIn: '2h' });
 
 const setUserInfo = user => ({
+  id: user._id,
   email: user.email,
   firstName: user.profile.firstName,
   lastName: user.profile.lastName,

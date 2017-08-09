@@ -1,6 +1,7 @@
 import { Request, Response, Router, NextFunction } from 'express';
 import Table from '../models/table';
 import User = require('../models/user');
+import * as mongoose from 'mongoose';
 
 /* Passport middleware */
 const passport = require('passport');
@@ -44,6 +45,7 @@ export default class TableRouter {
     User.findById(req.params.userId)
       .then(user => {
         const newTable = {
+          _id: mongoose.Types.ObjectId(),
           createdOn: Date.now(),
           createdBy: req.params.userId
         };
