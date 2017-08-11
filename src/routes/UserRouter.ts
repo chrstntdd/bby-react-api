@@ -24,7 +24,8 @@ const setUserInfo = user => ({
   firstName: user.profile.firstName,
   lastName: user.profile.lastName,
   role: user.role,
-  isVerified: user.isVerified
+  isVerified: user.isVerified,
+  tables: user.tableData.tables.map(table => table.id)
 });
 
 /* Passport middleware */
@@ -112,7 +113,9 @@ export default class UserRouter {
     });
 
     User.findOne({ email }, (err, existingUser) => {
-      if (err) return next(err);
+      if (err) {
+        return next(err);
+      }
       if (existingUser) {
         /* errors are handles within the passport.js config */
 
