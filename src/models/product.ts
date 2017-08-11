@@ -1,6 +1,7 @@
 import { Schema } from 'mongoose';
 
 export interface IProduct {
+  upc: string;
   name: string;
   sku: number;
   department: string;
@@ -13,6 +14,9 @@ export interface IProduct {
 }
 
 export const ProductSchema = new Schema({
+  upc: {
+    type: String
+  },
   name: {
     type: String
   },
