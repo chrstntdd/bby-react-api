@@ -532,7 +532,7 @@ export default class UserRouter {
     this.router.get('/', this.getAll);
     this.router.get('/:id', this.getById);
     this.router.post('/', this.createNew);
-    this.router.post('/sign-in', this.signIn, requireLogin);
+    this.router.post('/sign-in', requireLogin, this.signIn);
     this.router.post('/verify-email/:token', this.verifyEmail);
     this.router.post('/forgot-password', this.forgotPassword);
     this.router.post('/reset-password/:token', this.resetPassword);

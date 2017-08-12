@@ -100,6 +100,6 @@ export default class BestBuyRouter {
   }
 
   init(): void {
-    this.router.post('/upc', this.getByUPC, requireAuth);
+    this.router.post('/upc', requireAuth, this.getByUPC);
   }
 }
