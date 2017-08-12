@@ -90,7 +90,8 @@ UserSchema.virtual('url').get(function() {
 
 UserSchema.pre('save', function(next) {
   const user = this;
-  const SALT_FACTOR = 5;
+  /* Yeah we bout that security */
+  const SALT_FACTOR = 12;
 
   if (!user.isModified('password')) return next();
 
@@ -106,8 +107,7 @@ UserSchema.pre('save', function(next) {
 
 UserSchema.methods.comparePassword = function(inputPassword, callback) {
   bcrypt.compare(inputPassword, this.password, function(err, isMatch) {
-    if (err) return callback(err);
-    callback(null, isMatch);
+    err ? callback(err) : callback(null, isMatch);
   });
 };
 
