@@ -1,5 +1,5 @@
 import * as mongoose from 'mongoose';
-import * as bcrypt from 'bcrypt-nodejs';
+import { compare, hash, genSalt } from 'bcrypt-nodejs';
 import Table = require('./table');
 import { ITable, TableSchema } from './table';
 
@@ -95,9 +95,10 @@ UserSchema.pre('save', function(next) {
 
   if (!user.isModified('password')) return next();
 
-  bcrypt.genSalt(SALT_FACTOR, (err, salt) => {
+  /* Hash the user's password */
+  genSalt(SALT_FACTOR, (err, salt) => {
     if (err) return next(err);
-    bcrypt.hash(user.password, salt, null, (err, hash) => {
+    hash(user.password, salt, null, (err, hash) => {
       if (err) return next(err);
       user.password = hash;
       next();
@@ -106,7 +107,7 @@ UserSchema.pre('save', function(next) {
 });
 
 UserSchema.methods.comparePassword = function(inputPassword, callback) {
-  bcrypt.compare(inputPassword, this.password, function(err, isMatch) {
+  compare(inputPassword, this.password, (err, isMatch) => {
     err ? callback(err) : callback(null, isMatch);
   });
 };
