@@ -14,22 +14,37 @@ const testData = require('../testdata.json');
 
 chai.use(chaiHttp);
 
+mongoose.Promise = global.Promise;
 process.env.NODE_ENV = 'test';
 
-import { generateNewUser } from '../generateTestData.js';
+import { generateNewUser, generateTable } from '../generateTestData.js';
 import { runServer, closeServer } from '../src/index';
 import User = require('../src/models/user');
 const TEST_DATABASE_URL = process.env.TEST_DATABASE_URL;
 
 const seedUsers = testData => {
-  User.insertMany(testData);
+  return User.insertMany(testData)
+    .then(data => {
+      return;
+    })
+    .catch(err => {
+      console.log(err);
+    });
 };
 
 const tearDownDb = () => mongoose.connection.dropDatabase();
 
 describe('The API', () => {
   before(() => runServer(TEST_DATABASE_URL));
-  beforeEach(() => seedUsers(testData));
+  beforeEach(() =>
+    seedUsers(testData)
+      .then(() => {
+        return;
+      })
+      .catch(err => {
+        console.log(err);
+      })
+  );
   afterEach(() => tearDownDb());
   after(() => closeServer());
   const expectedProps = [
@@ -82,7 +97,7 @@ describe('The API', () => {
   describe('GET /api/v1/users/:id - get user by id', () => {
     it('should return the user with the requested ID', () => {
       let userId;
-      return User.findOne().exec().then(userObject => {
+      return User.findOne().then(userObject => {
         userId = userObject._id;
         return chai.request(app).get(`/api/v1/users/${userId}`).then(res => {
           res.status.should.equal(200);
@@ -154,7 +169,7 @@ describe('The API', () => {
         });
     });
     it('should 409 for a existing user trying to register with valid credentials', () => {
-      return User.findOne().exec().then(userObject => {
+      return User.findOne().then(userObject => {
         const { email, password, employeeNumber, storeNumber } = userObject;
         return chai
           .request(app)
@@ -220,7 +235,7 @@ describe('The API', () => {
   /* Delete user by id */
   describe('DELETE /api/v1/users/:id - delete a user by id params', () => {
     it('should delete that the user with the requested id', () => {
-      return User.findOne().exec().then(userObject => {
+      return User.findOne().then(userObject => {
         return chai
           .request(app)
           .del(`/api/v1/users/${userObject.id}`)
@@ -228,7 +243,7 @@ describe('The API', () => {
             res.status.should.equal(202);
             res.should.be.json;
             res.body.should.contain.keys('message');
-            return User.findById(userObject.id).exec();
+            return User.findById(userObject.id);
           })
           .then(_userObject => {
             should.not.exist(_userObject);
@@ -236,7 +251,7 @@ describe('The API', () => {
       });
     });
     it("should return an error if the user with the requested id doesn't  exist", () => {
-      return User.findOne().exec().then(userObject => {
+      return User.findOne().then(userObject => {
         const pathToNonExistentUser = '/api/v1/users/1337';
         return chai
           .request(app)
@@ -264,7 +279,7 @@ describe('The API', () => {
         storeNumber: 420,
         password: 'supersecret password'
       };
-      return User.findOne().exec().then(userObject => {
+      return User.findOne().then(userObject => {
         dataToUpdate.id = userObject.id;
 
         return chai
@@ -274,7 +289,7 @@ describe('The API', () => {
           .then(res => {
             res.should.be.json;
             res.body.should.contain.keys('message');
-            return User.findById(dataToUpdate.id).exec();
+            return User.findById(dataToUpdate.id);
           })
           .then(updatedUser => {
             updatedUser.profile.firstName.should.contain(
@@ -299,7 +314,7 @@ describe('The API', () => {
         storeNumber: 420,
         password: 'supersecret password'
       };
-      return User.findOne().exec().then(userObject => {
+      return User.findOne().then(userObject => {
         dataToUpdate.id = userObject.id;
         return chai
           .request(app)
@@ -322,7 +337,7 @@ describe('The API', () => {
         isVerified: true,
         id: ''
       };
-      return User.findOne().exec().then(userObject => {
+      return User.findOne().then(userObject => {
         dataToUpdate.id = userObject.id;
         return chai
           .request(app)
@@ -345,7 +360,7 @@ describe('The API', () => {
   /* User sign in */
   describe('POST /api/v1/users/sign-in - allow user to authenticate and receive JWT ', () => {
     it('should allow a user to sign in and issue a valid JWT', () => {
-      return User.findOne().exec().then(userObject => {
+      return User.findOne().then(userObject => {
         const { email } = userObject;
         return chai
           .request(app)
@@ -396,7 +411,7 @@ describe('The API', () => {
   /* User verify account */
   describe('POST /api/v1/users/verify-email/:token - verify users account to allow for use of the service', () => {
     it('should flip the isVerified prop on a users account', () => {
-      return User.findOne().exec().then(userObject => {
+      return User.findOne().then(userObject => {
         const { confirmationEmailToken } = userObject;
         userObject.isVerified.should.equal(false);
         return chai
@@ -429,7 +444,7 @@ describe('The API', () => {
   /* Forgot password handler */
   describe('POST /api/v1/users/forgot-password - handle sending forgot password email', () => {
     it('should set a reset token on the users account', () => {
-      return User.findOne().exec().then(userObject => {
+      return User.findOne().then(userObject => {
         const initialToken = userObject.resetPasswordToken;
         const { email } = userObject;
         return chai
@@ -511,7 +526,7 @@ describe('The API', () => {
   /* Reset password handler */
   describe('POST /api/v1/users/reset-password/:token - handle setting new password and resetting reset tokens', () => {
     it('should allow existing users to reset their password', () => {
-      return User.findOne().exec().then(userObject => {
+      return User.findOne().then(userObject => {
         const { email } = userObject;
         return chai
           .request(app)
@@ -538,7 +553,7 @@ describe('The API', () => {
       });
     });
     it("should return an error if the token doesn't match an existing user", () => {
-      return User.findOne().exec().then(userObject => {
+      return User.findOne().then(userObject => {
         const { email } = userObject;
         return chai
           .request(app)
@@ -582,7 +597,7 @@ describe('Fetching tables', () => {
   describe('GET /api/v1/tables/:userId - get all tables for the user supplied in the req params', () => {
     it('should return back all tables for an existing user', () => {
       let userId;
-      return User.findOne().exec().then(user => {
+      return User.findOne().then(user => {
         userId = user.id;
         return chai.request(app).get(`/api/v1/tables/${userId}`).then(res => {
           res.should.exist;
@@ -598,18 +613,95 @@ describe('Fetching tables', () => {
     it('should return back a single table that matches the url params', () => {
       let userId;
       let tableId;
-      return User.findOne().exec().then(userObject => {
-        console.log(`here in the tests ${userObject}`);
+      return User.findOne().then(userObject => {
         userId = userObject.id;
         tableId = userObject.tableData.tables[0].id;
         return chai
           .request(app)
           .get(`/api/v1/tables/${userId}/${tableId}`)
           .then(res => {
-            // console.log(`HEre in the test ${res.body}`);
             res.should.exist;
             res.should.be.json;
             res.status.should.equal(200);
+          });
+      });
+    });
+  });
+  describe('POST /api/v1/tables/:userId - create a new table for the user specified by the req params and return it', () => {
+    it('should create a new blank table for the user and return it', () => {
+      let userId;
+      return User.findOne().then(userObject => {
+        userId = userObject.id;
+        return chai.request(app).post(`/api/v1/tables/${userId}`).then(res => {
+          res.should.exist;
+          res.should.be.json;
+          res.status.should.equal(201);
+          res.body.should.contain.keys('createdOn', 'createdBy', '_id');
+        });
+      });
+    });
+  });
+  describe('PUT /api/v1/tables/:userId/:tableId', () => {
+    it('should update the existing table in the DB with the products array sent in', () => {
+      let userId;
+      let tableId;
+      let previousTableData;
+      const newTable = generateTable();
+      const newTableProducts = newTable.products;
+      const newProductUpcs: string[] = newTableProducts.map(product => {
+        return product.upc;
+      });
+      return User.findOne().then(userObject => {
+        userId = userObject.id;
+        tableId = userObject.tableData.tables[0].id;
+        previousTableData = userObject.tableData.tables[0].products;
+        return chai
+          .request(app)
+          .put(`/api/v1/tables/${userId}/${tableId}`)
+          .send({ products: newTable.products })
+          .then(res => {
+            res.should.exist;
+            res.should.be.json;
+            res.status.should.equal(201);
+            return User.findById(userId);
+          })
+          .then(updatedUser => {
+            const updatedTable = updatedUser.tableData.tables.id(tableId)
+              .products;
+            const updatedProductUpcs: string[] = newTableProducts.map(
+              product => {
+                return product.upc;
+              }
+            );
+
+            /* test that the UPCs are the same since a regular check 
+               * on the tableObjects wouldn't be viable. This is because 
+               * when we PUT the new array in place of the old one, we
+               * remove all OLD instances of products from the 
+               * table - destroying the ID they once had. Since the tables 
+               * are only really concerned with UPCs as an ID, we 
+               * can hold onto those instead of the original copy of the 
+               * products array. This is much easier than deep comparing 
+               * two objects with a nested array */
+            updatedProductUpcs.should.deep.equal(newProductUpcs);
+          });
+      });
+    });
+  });
+  describe('DELETE /api/v1/tables/:userId/:tableId', () => {
+    it('should delete the table with the id specified in the req params', () => {
+      let userId;
+      let tableId;
+      return User.findOne().then(userObject => {
+        userId = userObject.id;
+        tableId = userObject.tableData.tables[0].id;
+        return chai
+          .request(app)
+          .delete(`/api/v1/tables/${userId}/${tableId}`)
+          .then(res => {
+            res.should.exist;
+            res.should.be.json;
+            res.status.should.equal(202);
           });
       });
     });

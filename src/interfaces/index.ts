@@ -8,3 +8,23 @@ export interface MappedError {
   msg: string;
   value: string;
 }
+
+export interface IUser {
+  email: string;
+  password: string;
+  profile: {
+    firstName: string;
+    lastName: string;
+  };
+  employeeNumber: String;
+  storeNumber: number;
+  role: string;
+  resetPasswordToken: string | undefined;
+  resetPasswordExpires: Date | number | undefined;
+  confirmationEmailToken: string;
+  isVerified: boolean;
+  tableData: {
+    tableMetadata: string;
+    tables: any;
+  };
+}

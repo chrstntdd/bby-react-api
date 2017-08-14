@@ -2,31 +2,11 @@ import * as mongoose from 'mongoose';
 import { compare, hash, genSalt } from 'bcrypt-nodejs';
 import Table = require('./table');
 import { ITable, TableSchema } from './table';
-
-interface IUser {
-  email: string;
-  password: string;
-  profile: {
-    firstName: string;
-    lastName: string;
-  };
-  employeeNumber: String;
-  storeNumber: Number;
-  role: string;
-  resetPasswordToken: string | undefined;
-  resetPasswordExpires: Date | number | undefined;
-  confirmationEmailToken: string;
-  isVerified: boolean;
-  tableData: {
-    tableMetadata: string;
-    tables: any;
-  };
-}
+import { IUser } from '../interfaces';
 
 interface IUserModel extends IUser, mongoose.Document {}
 
-/* User schema */
-const UserSchema = new mongoose.Schema(
+const userSchema = new mongoose.Schema(
   {
     email: {
       type: String,
@@ -80,15 +60,15 @@ const UserSchema = new mongoose.Schema(
   }
 );
 
-UserSchema.virtual('fullName').get(function() {
+userSchema.virtual('fullName').get(function() {
   return `${this.profile.firstName} ${this.profile.lastName}`;
 });
 
-UserSchema.virtual('url').get(function() {
+userSchema.virtual('url').get(function() {
   return `/api/v1/users/${this._id}`;
 });
 
-UserSchema.pre('save', function(next) {
+userSchema.pre('save', function(next) {
   const user = this;
   /* Yeah we bout that security */
   const SALT_FACTOR = 12;
@@ -106,12 +86,13 @@ UserSchema.pre('save', function(next) {
   });
 });
 
-UserSchema.methods.comparePassword = function(inputPassword, callback) {
+userSchema.methods.comparePassword = function(inputPassword, callback) {
   compare(inputPassword, this.password, (err, isMatch) => {
     err ? callback(err) : callback(null, isMatch);
   });
 };
 
-const User = mongoose.model<IUserModel>('User', UserSchema);
+// tslint:disable-next-line:variable-name
+const User = mongoose.model<IUserModel>('User', userSchema, 'User');
 
 export = User;

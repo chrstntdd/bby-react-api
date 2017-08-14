@@ -11,15 +11,24 @@ export interface ITable {
 
 // interface ITableModel extends ITable, mongoose.Document {}
 
-export const TableSchema = new mongoose.Schema({
-  createdBy: {
-    type: String
+export const TableSchema: mongoose.Schema = new mongoose.Schema(
+  {
+    createdBy: {
+      type: String
+    },
+    createdOn: {
+      type: Date
+    },
+    products: [ProductSchema]
   },
-  createdOn: {
-    type: Date
-  },
-  products: [ProductSchema]
-});
+  {
+    capped: {
+      size: 1024,
+      max: 5,
+      autoIndexId: true
+    }
+  } as any
+);
 
 const Table = mongoose.model('Table', TableSchema);
 

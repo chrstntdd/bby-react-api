@@ -8,7 +8,7 @@ import { randomBytes } from 'crypto';
 import { createTransport } from 'nodemailer';
 
 /* Interfaces */
-import { IError, MappedError } from '../interfaces/index';
+import { IError, MappedError, IUser } from '../interfaces/index';
 
 /* Constants */
 const JWT_SECRET = process.env.JWT_SECRET;
@@ -114,7 +114,7 @@ export default class UserRouter {
 
     User.findOne({ email }, (err, existingUser) => {
       if (err) {
-        return next(err);
+        return res.status(420).json({ message: 'FUCK' });
       }
       if (existingUser) {
         /* errors are handles within the passport.js config */
@@ -255,8 +255,11 @@ export default class UserRouter {
                 .host}/confirm-email/${verifyToken}\n\n` +
               `If you did not request this, please ignore this email.\n`
           };
-          /* don't send a confirmation email when testing, but return the same result */
-          if (process.env.NODE_ENV === 'test') {
+          /* don't send a confirmation email when testing / development, but return the same result */
+          if (
+            process.env.NODE_ENV === 'test' ||
+            process.env.NODE_ENV === 'development'
+          ) {
             return res.status(201).json({
               user,
               message:
@@ -445,8 +448,11 @@ export default class UserRouter {
                 .host}/reset-password/${resetToken}\n\n` +
               `If you did not request this, please ignore this email and your password will remain unchanged.\n`
           };
-          /* don't send email when testing, but return the same result */
-          if (process.env.NODE_ENV === 'test') {
+          /* don't send email when testing / development, but return the same result */
+          if (
+            process.env.NODE_ENV === 'test' ||
+            process.env.NODE_ENV === 'development'
+          ) {
             return res.status(200).json({
               resetToken,
               status: res.status,
@@ -509,8 +515,11 @@ export default class UserRouter {
               'If you did not request this change, please contact us immediately.'
           };
 
-          /* when testing, don't send a confirmation email */
-          if (process.env.NODE_ENV === 'test') {
+          /* when testing / development, don't send a confirmation email */
+          if (
+            process.env.NODE_ENV === 'test' ||
+            process.env.NODE_ENV === 'development'
+          ) {
             return res.status(200).json({
               status: res.status,
               message: 'Your password has been changed successfully'
@@ -532,7 +541,7 @@ export default class UserRouter {
     this.router.get('/', this.getAll);
     this.router.get('/:id', this.getById);
     this.router.post('/', this.createNew);
-    this.router.post('/sign-in', requireLogin, this.signIn);
+    this.router.post('/sign-in', this.signIn, requireLogin);
     this.router.post('/verify-email/:token', this.verifyEmail);
     this.router.post('/forgot-password', this.forgotPassword);
     this.router.post('/reset-password/:token', this.resetPassword);

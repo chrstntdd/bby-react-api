@@ -54,7 +54,7 @@ export default class TableRouter {
         return newTable;
       })
       .then(newTable => {
-        res.status(200).json(newTable);
+        res.status(201).json(newTable);
       })
       .catch(err => {
         res.status(500).json({ message: 'EVERYTHING IS ON FIRE' });
@@ -66,24 +66,19 @@ export default class TableRouter {
    * or so) 
    */
   public updateById(req: Request, res: Response, next?: NextFunction): void {
-    const currentTableState = req.body;
+    const currentTableState = req.body.products;
     User.findOneAndUpdate(
       { _id: req.params.userId, 'tableData.tables._id': req.params.tableId },
       { $set: { 'tableData.tables.$.products': currentTableState } }
     )
       .then(updatedUser => {
-        res
-          .status(201)
-          .json(
-            `Successfully updated the table with the id of ${req.params
-              .tableId}`
-          );
+        res.status(201).json({
+          message: `Successfully updated the table with the id of ${req.params
+            .tableId}`
+        });
       })
       .catch(err => {
-        res.status(500).json({
-          err,
-          message: 'I have no idea what the fuck is going on'
-        });
+        res.status(500).json(err);
       });
   }
 

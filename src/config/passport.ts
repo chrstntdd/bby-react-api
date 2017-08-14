@@ -39,6 +39,7 @@ const localLogin = new LocalStrategy(
 
       user.comparePassword(password, (err, isMatch) => {
         /* if there was an error */
+        console.log(password);
         if (err) {
           return done(err);
         }
