@@ -5,7 +5,7 @@ import { Router, Request, Response, NextFunction } from 'express';
 import User = require('../models/user');
 import { sign } from 'jsonwebtoken';
 import { randomBytes } from 'crypto';
-import { createTransport } from 'nodemailer';
+import * as nodemailer from 'nodemailer';
 
 /* Interfaces */
 import { IError, MappedError, IUser } from '../interfaces/index';
@@ -243,7 +243,7 @@ export default class UserRouter {
           if (err) {
             return next(err);
           }
-          const transporter = createTransport(SMTP_URL);
+          const transporter = nodemailer.createTransport(SMTP_URL);
           const emailData = {
             to: user.email,
             from: FROM_EMAIL,
@@ -436,7 +436,7 @@ export default class UserRouter {
 
         existingUser.save(err => {
           if (err) return err;
-          const transporter = createTransport(SMTP_URL);
+          const transporter = nodemailer.createTransport(SMTP_URL);
           const emailData = {
             to: existingUser.email,
             from: FROM_EMAIL,
@@ -505,7 +505,7 @@ export default class UserRouter {
           if (err) return next(err);
 
           /* if password reset is successful, alert via email */
-          const transporter = createTransport(SMTP_URL);
+          const transporter = nodemailer.createTransport(SMTP_URL);
           const emailData = {
             to: existingUser.email,
             from: FROM_EMAIL,
