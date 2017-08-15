@@ -1,11 +1,4 @@
 language: node_js
 node_js: node
 services:
-- mongodb
-deploy:
-  provider: heroku
-  api_key:
-    secure: iiqtZ01ype+MPJteYO30kyYOcSXMa9m3TQgEijL5sIYHhL5GiBZLsAVkqCtlF/atPRZ+Tv/gE6QLyQRrGdLKKRHuv/wbob3N0QrqmNzhiO7Sem7YUxa5X+HwJQMUXV7fs2mVDkUAXXLXN6k2XytdrzZZWh/nq7cMGlT4+bSRuoFOYa9Ly41Ag6trzSgTFLk5T4KUYkLD6hApU6dcM7mPDeZ3ff8VWBu9eZFuB3GviXim9RossToa6pak20qsEa7dMu8e466aKDC4vleBbkixGNK3EdMNo/W2aAOEsJRu8QXEPQrgCoA1CtXaJunAHr0sZ/ei4RhOMaq9soWDxTLxQfn3RR7Fh+3UcUL4cz0UOtuvfjERX+sHAeu28wScbCPepBuwA7wkPYGdPWjRjK6tb1ZdK/8ZoPkc5wkO1uJ4Nm54EEcYP+zk/GbWqQt7cJYXuYBEA26cvGfjQNVRo2lN0nL4W6LOBfryzOntPTYGhJqN4eVdOvnXvQx80xUWX9UtGu/gKbSfvHbNqydJtLmfsLfJVaYKPAO0W61PL7Wgf1HWCIfQ7AnFzFbwYVgLfVK4erGLFMgcXfExecKs7YZrOp1e/wE+PxfnIjU3jxl0svD7yNkymYlbE96th5q3ToXCQQAFfkh5cqRDJzdtAf11REJHVRyuV+wxC0pCN0zzI7w=
-  app: thawing-retreat-22470
-  on:
-    repo: chrstntdd/bby-react-api
+ - mongodb
