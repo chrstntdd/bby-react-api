@@ -6,6 +6,7 @@ import User = require('../models/user');
 import { sign } from 'jsonwebtoken';
 import { randomBytes } from 'crypto';
 import * as nodemailer from 'nodemailer';
+import * as smtpTransport from 'nodemailer-smtp-transport';
 
 /* Interfaces */
 import { IError, MappedError, IUser } from '../interfaces/index';
@@ -13,7 +14,20 @@ import { IError, MappedError, IUser } from '../interfaces/index';
 /* Constants */
 const JWT_SECRET = process.env.JWT_SECRET;
 const SMTP_URL = process.env.SMTP_URL;
+const SMTP_USER = process.env.SMTP_USER;
+const SMTP_PASS = process.env.SMTP_PASS;
 const FROM_EMAIL = process.env.FROM_EMAIL;
+
+const transporter = nodemailer.createTransport(
+  smtpTransport({
+    service: 'gmail',
+    host: 'smtp.gmail.com',
+    auth: {
+      user: SMTP_USER,
+      password: SMTP_PASS
+    }
+  })
+);
 
 /* Utility functions */
 const generateJWT = user => sign(user, JWT_SECRET, { expiresIn: '2h' });
@@ -243,7 +257,7 @@ export default class UserRouter {
           if (err) {
             return next(err);
           }
-          const transporter = nodemailer.createTransport(SMTP_URL);
+
           const emailData = {
             to: user.email,
             from: FROM_EMAIL,
@@ -267,12 +281,15 @@ export default class UserRouter {
               status: res.status
             });
           } else {
-            transporter.sendMail(emailData);
-            return res.status(201).json({
-              user,
-              message:
-                'Your account has been created, now please check your work email to confirm your account.',
-              status: res.status
+            transporter.sendMail(emailData, (error, info) => {
+              error
+                ? console.log(error)
+                : res.status(201).json({
+                    user,
+                    message:
+                      'Your account has been created, now please check your work email to confirm your account.',
+                    status: res.status
+                  });
             });
           }
         });
@@ -436,7 +453,6 @@ export default class UserRouter {
 
         existingUser.save(err => {
           if (err) return err;
-          const transporter = nodemailer.createTransport(SMTP_URL);
           const emailData = {
             to: existingUser.email,
             from: FROM_EMAIL,
@@ -505,7 +521,6 @@ export default class UserRouter {
           if (err) return next(err);
 
           /* if password reset is successful, alert via email */
-          const transporter = nodemailer.createTransport(SMTP_URL);
           const emailData = {
             to: existingUser.email,
             from: FROM_EMAIL,
