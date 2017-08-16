@@ -164,5 +164,6 @@ const writeFileToDisk = () => {
 module.exports = {
   generateNewUser,
   writeFileToDisk,
-  generateTable
+  generateTable,
+  generateUser
 };

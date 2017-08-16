@@ -104,13 +104,6 @@ export default class UserRouter {
 
   /* Sign in handler*/
   public signIn(req: Request, res: Response, next?: NextFunction): void {
-    /* Sanitize and validate input */
-    req.checkBody('email', 'Please enter a valid email address').isEmail();
-    req.checkBody('email', 'Please enter an email').notEmpty();
-
-    req.sanitizeBody('email').escape();
-    req.sanitizeBody('email').trim();
-
     /* Assign valid and sanitized input to a variable for use */
     const email: string = req.body.email;
 
@@ -555,7 +548,7 @@ export default class UserRouter {
     this.router.get('/', this.getAll);
     this.router.get('/:id', this.getById);
     this.router.post('/', this.createNew);
-    this.router.post('/sign-in', this.signIn, requireLogin);
+    this.router.post('/sign-in', requireLogin, this.signIn);
     this.router.post('/verify-email/:token', this.verifyEmail);
     this.router.post('/forgot-password', this.forgotPassword);
     this.router.post('/reset-password/:token', this.resetPassword);
