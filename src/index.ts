@@ -11,11 +11,14 @@ const app: Api = new Api();
 const env = app.currentEnv();
 
 let DATABASE_URL;
+let PORT;
 
-env === 'development'
-  ? (DATABASE_URL = process.env.DATABASE_URL)
+env === 'development' || 'test'
+  ? (DATABASE_URL = process.env.TEST_DATABASE_URL)
   : (DATABASE_URL = process.env.MONGODB_URI);
-const PORT = process.env.PORT || 3000;
+
+env === 'development' || 'test' ? (PORT = 3000) : (PORT = process.env.PORT);
+
 const JWT_SECRET = process.env.JWT_SECRET;
 
 /* Set mongoose promise to native ES6 promise */
