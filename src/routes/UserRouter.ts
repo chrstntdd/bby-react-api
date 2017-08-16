@@ -18,7 +18,15 @@ const SMTP_PASS = process.env.SMTP_PASS;
 const FROM_EMAIL = process.env.FROM_EMAIL;
 const SMTP_URL = process.env.SMTP_URL;
 
-const transporter = nodemailer.createTransport(SMTP_URL);
+const transporter = nodemailer.createTransport({
+  host: 'smtp.gmail.com',
+  secure: true,
+  port: 465,
+  auth: {
+    user: SMTP_USER,
+    pass: SMTP_PASS
+  }
+});
 
 /* Utility functions */
 const generateJWT = user => sign(user, JWT_SECRET, { expiresIn: '2h' });
