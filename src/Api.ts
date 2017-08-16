@@ -29,6 +29,9 @@ export default class Api {
   /* apply middleware */
   private middleware(): void {
     this.express.use((req, res, next) => {
+      /* Don't allow caching. Needed for IE support :/ */
+      res.header('Cache-Control', 'no-cache, no-store, must-revalidate');
+      res.header('Pragma', 'no-cache');
       res.header('Access-Control-Allow-Origin', '*');
       res.header(
         'Access-Control-Allow-Methods',
