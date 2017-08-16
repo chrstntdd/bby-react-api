@@ -702,38 +702,40 @@ describe('POST /api/v1/users/sign-in - allow user to authenticate and receive JW
       });
     });
   });
-  // it('should return validation errors if the email is empty', () => {
-  //   return chai
-  //     .request(app)
-  //     .post('/api/v1/users/sign-in')
-  //     .send({ email: '', password: 'password' })
-  //     .then(res => {
-  //       res.status.should.equal(406);
-  //     })
-  //     .catch(err => {
-  //       console.log(err.response.error);
-  //       const validationMsg = JSON.parse(err.response.error.text);
-  //       validationMsg.should.be.an('object');
-  //       validationMsg.messages.should.be.an('array');
-  //       validationMsg.messages.should.have.length.of.at.least(1);
-  //       err.response.error.status.should.equal(406);
-  //     });
-  // });
-  // it('should return validation errors if the email fails validation', () => {
-  //   const invalidEmail = 'invalidemai1.com-';
-  //   return chai
-  //     .request(app)
-  //     .post('/api/v1/users/sign-in')
-  //     .send({ email: invalidEmail })
-  //     .then(res => {
-  //       res.status.should.equal(406);
-  //     })
-  //     .catch(err => {
-  //       const validationMsg = JSON.parse(err.response.error.text);
-  //       validationMsg.should.be.an('object');
-  //       validationMsg.messages.should.be.an('array');
-  //       validationMsg.messages[0].value.should.equal(invalidEmail);
-  //       err.response.error.status.should.equal(406);
-  //     });
-  // });
+  it('passport should return a 400 if email is empty', () => {
+    return chai
+      .request(app)
+      .post('/api/v1/users/sign-in')
+      .send({ email: '', password: 'password' })
+      .then(res => {
+        res.status.should.equal(400);
+      })
+      .catch(err => {
+        err.response.error.text.should.equal('Bad Request');
+        err.response.error.status.should.equal(400);
+      });
+  });
+  it('should return validation errors if the email fails validation', () => {
+    const invalidEmail = 'invalidemai1.com-';
+    return chai
+      .request(app)
+      .post('/api/v1/users/sign-in')
+      .send({ email: invalidEmail, password: 'password' })
+      .then(res => {
+        res.status.should.equal(400);
+      })
+      .catch(err => {
+        const validationMsg = JSON.parse(err.response.error.text);
+        err.should.exist;
+        validationMsg.should.be.an('object');
+        validationMsg.validationErrors.should.be.an('array');
+        validationMsg.validationErrors.should.have.length.of.at.least(1);
+        validationMsg.validationErrors[0].should.contain.keys(
+          'param',
+          'msg',
+          'value'
+        );
+        err.response.error.status.should.equal(400);
+      });
+  });
 });

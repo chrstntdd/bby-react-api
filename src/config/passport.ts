@@ -23,6 +23,12 @@ const localLogin = new LocalStrategy(
   localOptions,
   (req, employeeNumber, password, done) => {
     /* Sanitize and validate input */
+    req.checkBody('email', 'Please enter a valid email address').isEmail();
+    req.checkBody('email', 'Please enter an email').notEmpty();
+
+    req.checkBody('password', 'Please enter a password.').notEmpty();
+    req.checkBody('password', 'Please enter a valid password').isAlpha();
+
     req.sanitizeBody('email').normalizeEmail({
       all_lowercase: true
     });
@@ -30,18 +36,18 @@ const localLogin = new LocalStrategy(
     req.sanitizeBody('email').trim();
     req.sanitizeBody('password').escape();
     req.sanitizeBody('password').trim();
-    req.checkBody('email', 'Please enter a valid email address').isEmail();
-    req.checkBody('email', 'Please enter an email').notEmpty();
-
-    req.checkBody('password', 'Please enter a password.').notEmpty();
-    req.checkBody('password', 'Please enter a valid password').isAlpha();
 
     const cleanEmail = req.body.email;
     const cleanPassword = req.body.password;
 
     req
       .getValidationResult()
-      .then(() => {
+      .then(errors => {
+        if (!errors.isEmpty()) {
+          const validationErrors = [];
+          errors.array().forEach(error => validationErrors.push(error));
+          return done(null, { validationErrors });
+        }
         User.findOne({ email: cleanEmail }, (err, user) => {
           /* if there was an error */
           if (err) {
@@ -49,15 +55,16 @@ const localLogin = new LocalStrategy(
           }
           /* if the supplied params dont return an account */
           if (!user) {
-            return done(null, false, {
-              message:
+            return done(null, {
+              passportError:
                 "We can't seem to find an account registered with that id. Please try again"
             });
           }
           /* if the user has an account, but has yet to verify their email */
           if (!user.isVerified) {
-            return done(null, false, {
-              message: 'Please verify your email before using this service.'
+            return done(null, {
+              passportError:
+                'Please verify your email before using this service.'
             });
           }
 
@@ -68,8 +75,9 @@ const localLogin = new LocalStrategy(
             }
             /* if the supplied password param doesn't match the db password */
             if (!isMatch) {
-              return done(null, false, {
-                message: 'Your password looks a bit off. Please try again.'
+              return done(null, {
+                passportError:
+                  'Your password looks a bit off. Please try again.'
               });
             }
 
@@ -78,13 +86,9 @@ const localLogin = new LocalStrategy(
           });
         });
       })
-      .catch(errors => {
-        if (errors) {
-          const messages = [];
-          errors.forEach(error => messages.push(error));
-          return done(null, false, {});
-        }
-        return done();
+      .catch(err => {
+        console.log(err);
+        return done(null, { err });
       });
   }
 );

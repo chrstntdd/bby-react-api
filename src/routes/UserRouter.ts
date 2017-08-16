@@ -1,3 +1,4 @@
+import { ValidationSchema } from 'express-validator';
 require('dotenv').config();
 
 import { Router, Request, Response, NextFunction } from 'express';
@@ -6,7 +7,6 @@ import User = require('../models/user');
 import { sign } from 'jsonwebtoken';
 import { randomBytes } from 'crypto';
 import * as nodemailer from 'nodemailer';
-import * as smtpTransport from 'nodemailer-smtp-transport';
 
 /* Interfaces */
 import { IError, MappedError, IUser } from '../interfaces/index';
@@ -16,17 +16,9 @@ const JWT_SECRET = process.env.JWT_SECRET;
 const SMTP_USER = process.env.SMTP_USER;
 const SMTP_PASS = process.env.SMTP_PASS;
 const FROM_EMAIL = process.env.FROM_EMAIL;
+const SMTP_URL = process.env.SMTP_URL;
 
-const transporter = nodemailer.createTransport(
-  smtpTransport({
-    service: 'gmail',
-    host: 'smtp.gmail.com',
-    auth: {
-      user: SMTP_USER,
-      password: SMTP_PASS
-    }
-  })
-);
+const transporter = nodemailer.createTransport(SMTP_URL);
 
 /* Utility functions */
 const generateJWT = user => sign(user, JWT_SECRET, { expiresIn: '2h' });
@@ -104,36 +96,28 @@ export default class UserRouter {
 
   /* Sign in handler*/
   public signIn(req: Request, res: Response, next?: NextFunction): void {
-    /* Assign valid and sanitized input to a variable for use */
-    const email: string = req.body.email;
+    /* returned from passport */
+    const passportResponse = req.user;
 
-    /* Accumulate errors in result and return errors if so */
-    req.getValidationResult().then(result => {
-      if (!result.isEmpty()) {
-        res.status(406).json({
-          status: res.status,
-          messages: result.array()
-        });
-        return;
-      }
-    });
-
-    User.findOne({ email }, (err, existingUser) => {
-      if (err) {
-        return res.status(420).json({ message: 'FUCK' });
-      }
-      if (existingUser) {
-        /* errors are handles within the passport.js config */
-
-        /* grab data from user response to set in JWT */
-        const userInfo = setUserInfo(existingUser);
-
-        return res.status(200).json({
-          token: `JWT ${generateJWT(userInfo)}`,
-          user: userInfo
-        });
-      }
-    });
+    if (Object.keys(passportResponse).includes('passportError')) {
+      const { passportError } = passportResponse;
+      res.status(400).json({
+        /* passport validation errors */
+        passportError
+      });
+    } else if (Object.keys(passportResponse).includes('validationErrors')) {
+      const { validationErrors } = passportResponse;
+      res.status(400).json({
+        /* express validation errors */
+        validationErrors
+      });
+    } else {
+      const userInfo = setUserInfo(passportResponse);
+      res.status(200).json({
+        token: `JWT ${generateJWT(userInfo)}`,
+        user: userInfo
+      });
+    }
   }
 
   /* create a new user (Register) */
