@@ -18,15 +18,7 @@ const SMTP_PASS = process.env.SMTP_PASS;
 const FROM_EMAIL = process.env.FROM_EMAIL;
 const SMTP_URL = process.env.SMTP_URL;
 
-const transporter = nodemailer.createTransport({
-  host: 'smtp.gmail.com',
-  secure: true,
-  port: 465,
-  auth: {
-    user: SMTP_USER,
-    pass: SMTP_PASS
-  }
-});
+const transporter = nodemailer.createTransport(SMTP_URL);
 
 /* Utility functions */
 const generateJWT = user => sign(user, JWT_SECRET, { expiresIn: '2h' });
@@ -115,7 +107,7 @@ export default class UserRouter {
       });
     } else if (Object.keys(passportResponse).includes('validationErrors')) {
       const { validationErrors } = passportResponse;
-      res.status(400).json({
+      res.status(406).json({
         /* express validation errors */
         validationErrors
       });

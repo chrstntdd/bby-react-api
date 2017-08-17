@@ -722,7 +722,7 @@ describe('POST /api/v1/users/sign-in - allow user to authenticate and receive JW
       .post('/api/v1/users/sign-in')
       .send({ email: invalidEmail, password: 'password' })
       .then(res => {
-        res.status.should.equal(400);
+        res.status.should.equal(406);
       })
       .catch(err => {
         const validationMsg = JSON.parse(err.response.error.text);
@@ -735,7 +735,7 @@ describe('POST /api/v1/users/sign-in - allow user to authenticate and receive JW
           'msg',
           'value'
         );
-        err.response.error.status.should.equal(400);
+        err.response.error.status.should.equal(406);
       });
   });
 });
