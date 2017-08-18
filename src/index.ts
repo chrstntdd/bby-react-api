@@ -29,13 +29,8 @@ let server;
 
 // TAKES A DATABASE URL AS AN ARGUMENT. NEEDED FOR INTEGRATION TESTS. DEFAULTS TO THE MAIN URL.
 export const runServer = (
-<<<<<<< HEAD
-  databaseUrl: string = process.env.MONGODB_URI,
-  port: number = PORT
-=======
   databaseUrl: string = DATABASE_URL,
   port: number | string = PORT
->>>>>>> d59087b46f3aa6d7814702ea36c71e9aa5fd7e3f
 ) =>
   new Promise((resolve, reject) => {
     mongoose.connect(databaseUrl, { useMongoClient: true }, err => {
