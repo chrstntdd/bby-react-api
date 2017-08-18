@@ -19,8 +19,6 @@ env === 'development' || 'test'
 
 env === 'development' || 'test' ? (PORT = 3000) : (PORT = process.env.PORT);
 
-const JWT_SECRET = process.env.JWT_SECRET;
-
 /* Set mongoose promise to native ES6 promise */
 mongoose.Promise = global.Promise;
 
