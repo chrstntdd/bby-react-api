@@ -17,6 +17,7 @@ const SMTP_USER = process.env.SMTP_USER;
 const SMTP_PASS = process.env.SMTP_PASS;
 const FROM_EMAIL = process.env.FROM_EMAIL;
 const SMTP_URL = process.env.SMTP_URL;
+const CLIENT_URL = process.env.CLIENT_URL;
 
 const transporter = nodemailer.createTransport(SMTP_URL);
 
@@ -239,10 +240,9 @@ export default class UserRouter {
             from: FROM_EMAIL,
             subject: 'Quantified Account Confirmation',
             text:
-              `${'You are receiving this because you (or someone else) have requested an account with Quantified.\n\n' +
-                'Please click on the following link, or paste this into your browser to complete the process:\n\n' +
-                'http://'}${req.headers
-                .host}/confirm-email/${verifyToken}\n\n` +
+              'You are receiving this because you (or someone else) have requested an account with Quantified.\n\n' +
+              'Please click on the following link, or paste this into your browser to complete the process:\n\n' +
+              `${CLIENT_URL}/confirm-email/${verifyToken}\n\n` +
               `If you did not request this, please ignore this email.\n`
           };
           /* don't send a confirmation email when testing / development, but return the same result */
@@ -434,10 +434,9 @@ export default class UserRouter {
             from: FROM_EMAIL,
             subject: 'Quantified Password Reset',
             text:
-              `${'You are receiving this because you (or someone else) have requested the reset of the password for your account.\n\n' +
-                'Please click on the following link, or paste this into your browser to complete the process:\n\n' +
-                'http://'}${req.headers
-                .host}/reset-password/${resetToken}\n\n` +
+              'You are receiving this because you (or someone else) have requested the reset of the password for your account.\n\n' +
+              'Please click on the following link, or paste this into your browser to complete the process:\n\n' +
+              `${CLIENT_URL}/reset-password/${resetToken}\n\n` +
               `If you did not request this, please ignore this email and your password will remain unchanged.\n`
           };
           /* don't send email when testing / development, but return the same result */
