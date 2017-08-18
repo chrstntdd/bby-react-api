@@ -19,8 +19,6 @@ env === 'development' || 'test'
 
 env === 'development' || 'test' ? (PORT = 3000) : (PORT = process.env.PORT);
 
-const JWT_SECRET = process.env.JWT_SECRET;
-
 /* Set mongoose promise to native ES6 promise */
 mongoose.Promise = global.Promise;
 
@@ -31,7 +29,7 @@ let server;
 
 // TAKES A DATABASE URL AS AN ARGUMENT. NEEDED FOR INTEGRATION TESTS. DEFAULTS TO THE MAIN URL.
 export const runServer = (
-  databaseUrl: string = DATABASE_URL,
+  databaseUrl: string = process.env.MONGODB_URI,
   port: number = PORT
 ) =>
   new Promise((resolve, reject) => {
