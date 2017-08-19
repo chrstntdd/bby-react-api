@@ -13,11 +13,19 @@ const env = app.currentEnv();
 let DATABASE_URL;
 let PORT;
 
-env === 'development' || 'test'
-  ? (DATABASE_URL = process.env.TEST_DATABASE_URL)
-  : (DATABASE_URL = process.env.MONGODB_URI);
+// env === 'development' || 'test'
+//   ? (DATABASE_URL = process.env.TEST_DATABASE_URL)
+//   : (DATABASE_URL = process.env.MONGODB_URI);
 
-env === 'development' || 'test' ? (PORT = 3000) : (PORT = process.env.PORT);
+// env === 'development' || 'test' ? (PORT = 3000) : (PORT = process.env.PORT);
+
+if (env === 'production') {
+  DATABASE_URL = process.env.MONGODB_URI;
+  PORT = process.env.PORT;
+} else {
+  DATABASE_URL = process.env.TEST_DATABASE_URL;
+  PORT = 3000;
+}
 
 /* Set mongoose promise to native ES6 promise */
 mongoose.Promise = global.Promise;
@@ -27,7 +35,6 @@ mongoose.Promise = global.Promise;
  */
 let server;
 
-// TAKES A DATABASE URL AS AN ARGUMENT. NEEDED FOR INTEGRATION TESTS. DEFAULTS TO THE MAIN URL.
 export const runServer = (
   databaseUrl: string = DATABASE_URL,
   port: number | string = PORT
