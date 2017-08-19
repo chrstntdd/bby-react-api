@@ -39,7 +39,6 @@ const passport = require('passport');
 const passportService = require('../config/passport');
 
 const requireAuth = passport.authenticate('jwt', { session: false });
-const requireLogin = passport.authenticate('local', { session: false });
 
 /* 
 *
@@ -97,28 +96,80 @@ export default class UserRouter {
 
   /* Sign in handler*/
   public signIn(req: Request, res: Response, next?: NextFunction): void {
-    /* returned from passport */
-    const passportResponse = req.user;
+    // * Sanitize and validate input */
+    req.checkBody('email', 'Please enter a valid email address').isEmail();
+    req.checkBody('email', 'Please enter an email').notEmpty();
 
-    if (Object.keys(passportResponse).includes('passportError')) {
-      const { passportError } = passportResponse;
-      res.status(400).json({
-        /* passport validation errors */
-        passportError
+    req.checkBody('password', 'Please enter a password.').notEmpty();
+    req.checkBody('password', 'Please enter a valid password').isAlpha();
+
+    req.sanitizeBody('email').normalizeEmail({
+      all_lowercase: true
+    });
+    req.sanitizeBody('email').escape();
+    req.sanitizeBody('email').trim();
+    req.sanitizeBody('password').escape();
+    req.sanitizeBody('password').trim();
+
+    const cleanEmail = req.body.email;
+    const cleanPassword = req.body.password;
+
+    req
+      .getValidationResult()
+      .then(errors => {
+        if (!errors.isEmpty()) {
+          const validationErrors = [];
+          errors.array().forEach(error => validationErrors.push(error));
+          return res.status(400).json({ validationErrors });
+        }
+        User.findOne({ email: cleanEmail }, (err, existingUser) => {
+          /* if there was an error */
+          if (err) {
+            return next(err);
+          }
+          /* if the supplied params dont return an account */
+          if (!existingUser) {
+            return res.status(400).json({
+              emailMessage:
+                "We can't seem to find an account registered with that id. Please try again"
+            });
+          }
+          /* if the existingUser has an account, but has yet to verify their email */
+          if (!existingUser.isVerified) {
+            return res.status(400).json({
+              verifyMessage:
+                'Please verify your email before using this service.'
+            });
+          }
+
+          existingUser.comparePassword(cleanPassword, (err, isMatch) => {
+            /* if there was an error */
+            if (err) {
+              return next(err);
+            }
+            /* if the supplied password param doesn't match the db password */
+            if (!isMatch) {
+              return res.status(400).json({
+                passwordMessage:
+                  'Your password looks a bit off. Please try again.'
+              });
+            }
+
+            /* return the user successfully after  generating a JWT for 
+             * client authentication
+             */
+            const userInfo = setUserInfo(existingUser);
+            return res.status(200).json({
+              token: `JWT ${generateJWT(userInfo)}`,
+              user: userInfo
+            });
+          });
+        });
+      })
+      .catch(err => {
+        console.log(err);
+        return res.status(500).json({ error: 'Everything is on fire' });
       });
-    } else if (Object.keys(passportResponse).includes('validationErrors')) {
-      const { validationErrors } = passportResponse;
-      res.status(406).json({
-        /* express validation errors */
-        validationErrors
-      });
-    } else {
-      const userInfo = setUserInfo(passportResponse);
-      res.status(200).json({
-        token: `JWT ${generateJWT(userInfo)}`,
-        user: userInfo
-      });
-    }
   }
 
   /* create a new user (Register) */
@@ -531,7 +582,7 @@ export default class UserRouter {
     this.router.get('/', this.getAll);
     this.router.get('/:id', this.getById);
     this.router.post('/', this.createNew);
-    this.router.post('/sign-in', requireLogin, this.signIn);
+    this.router.post('/sign-in', this.signIn);
     this.router.post('/verify-email/:token', this.verifyEmail);
     this.router.post('/forgot-password', this.forgotPassword);
     this.router.post('/reset-password/:token', this.resetPassword);

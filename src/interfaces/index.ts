@@ -27,4 +27,5 @@ export interface IUser {
     tableMetadata: string;
     tables: any;
   };
+  comparePassword(cleanPassword: string, callback: any);
 }
