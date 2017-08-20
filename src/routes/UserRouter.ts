@@ -32,6 +32,20 @@ const setUserInfo = user => ({
   tables: user.tableData.tables.map(table => table.id)
 });
 
+/* generate a verify token for the user */
+const genToken = async (size): Promise<any> => {
+  await new Promise((resolve, reject) => {
+    randomBytes(size, (err, buffer) => {
+      if (buffer) {
+        resolve(buffer.toString('hex'));
+      }
+      if (err) {
+        reject(err);
+      }
+    });
+  });
+};
+
 /* Passport middleware */
 const passport = require('passport');
 const passportService = require('../config/passport');
@@ -171,88 +185,88 @@ export default class UserRouter {
   }
 
   /* create a new user (Register) */
-  public createNew(req: Request, res: Response, next?: NextFunction): void {
-    /* Validation stack. Prepare yourself */
-    /* No need to validate the email since it's generated on the server from the employee number */
+  public async createNew(
+    req: Request,
+    res: Response,
+    next?: NextFunction
+  ): Promise<any> {
+    try {
+      /* Validation stack. Prepare yourself */
+      /* No need to validate the email since it's generated on the server from the employee number */
+      req.checkBody('firstName', 'Please enter your first name').notEmpty();
+      req
+        .checkBody(
+          'firstName',
+          'Only letters are allowed for names. Try again please.'
+        )
+        .isAlpha();
 
-    req.checkBody('firstName', 'Please enter your first name').notEmpty();
-    req
-      .checkBody(
-        'firstName',
-        'Only letters are allowed for names. Try again please.'
-      )
-      .isAlpha();
+      req.checkBody('lastName', 'Please enter your last name').notEmpty();
+      req
+        .checkBody(
+          'lastName',
+          'Only letters are allowed for names. Try again please.'
+        )
+        .isAlpha();
 
-    req.checkBody('lastName', 'Please enter your last name').notEmpty();
-    req
-      .checkBody(
-        'lastName',
-        'Only letters are allowed for names. Try again please.'
-      )
-      .isAlpha();
+      req.checkBody('password', 'Please enter in a password').notEmpty();
+      req
+        .checkBody(
+          'password',
+          'Your password should only contain alphanumeric characters'
+        )
+        .isAlphanumeric();
 
-    req.checkBody('password', 'Please enter in a password').notEmpty();
-    req
-      .checkBody(
-        'password',
-        'Your password should only contain alphanumeric characters'
-      )
-      .isAlphanumeric();
+      req
+        .checkBody('employeeNumber', 'Please enter your employee number')
+        .notEmpty();
+      req
+        .checkBody(
+          'employeeNumber',
+          'Your employee number should be in the format <LETTER><NUMBERiD>'
+        )
+        .isAlphanumeric();
 
-    req
-      .checkBody('employeeNumber', 'Please enter your employee number')
-      .notEmpty();
-    req
-      .checkBody(
-        'employeeNumber',
-        'Your employee number should be in the format <LETTER><NUMBERiD>'
-      )
-      .isAlphanumeric();
+      req.checkBody('storeNumber', 'Please enter your store number').notEmpty();
+      req.checkBody('storeNumber', 'Please enter a valid store number').isInt();
 
-    req.checkBody('storeNumber', 'Please enter your store number').notEmpty();
-    req.checkBody('storeNumber', 'Please enter a valid store number').isInt();
+      /* Time to sanitize! */
 
-    /* Time to sanitize! */
+      req.sanitizeBody('firstName').escape();
+      req.sanitizeBody('firstName').trim();
 
-    req.sanitizeBody('firstName').escape();
-    req.sanitizeBody('firstName').trim();
+      req.sanitizeBody('lastName').escape();
+      req.sanitizeBody('lastName').trim();
 
-    req.sanitizeBody('lastName').escape();
-    req.sanitizeBody('lastName').trim();
+      req.sanitizeBody('password').escape();
+      req.sanitizeBody('password').trim();
 
-    req.sanitizeBody('password').escape();
-    req.sanitizeBody('password').trim();
+      req.sanitizeBody('employeeNumber').escape();
+      req.sanitizeBody('employeeNumber').trim();
 
-    req.sanitizeBody('employeeNumber').escape();
-    req.sanitizeBody('employeeNumber').trim();
+      req.sanitizeBody('storeNumber').escape();
+      req.sanitizeBody('storeNumber').trim();
+      req.sanitizeBody('storeNumber').toInt(10);
 
-    req.sanitizeBody('storeNumber').escape();
-    req.sanitizeBody('storeNumber').trim();
-    req.sanitizeBody('storeNumber').toInt(10);
+      /* Assign validated and sanitized inputs to variables for later use */
+      const email = `${req.body.employeeNumber}@bestbuy.com`;
+      const firstName = req.body.firstName;
+      const lastName = req.body.lastName;
+      const password = req.body.password;
+      const employeeNumber = req.body.employeeNumber;
+      const storeNumber = req.body.storeNumber;
 
-    /* Assign validated and sanitized inputs to variables for later use */
-    const email = `${req.body.employeeNumber}@bestbuy.com`;
-    const firstName = req.body.firstName;
-    const lastName = req.body.lastName;
-    const password = req.body.password;
-    const employeeNumber = req.body.employeeNumber;
-    const storeNumber = req.body.storeNumber;
-
-    /* Accumulate errors in result and return error if so */
-    req.getValidationResult().then(result => {
-      if (!result.isEmpty()) {
-        res.status(406).json({
+      /* Accumulate errors in result and return error if so */
+      const validationResult = await req.getValidationResult();
+      if (!validationResult.isEmpty()) {
+        return res.status(406).json({
           status: res.status,
-          messages: result.array()
+          messages: validationResult.array()
         });
-        return;
       }
-    });
 
-    User.findOne({ email }, (err, existingUser) => {
-      if (err) {
-        return next(err);
-      }
+      /* await the call to check if the user exists already */
+      const existingUser = await User.findOne({ email });
 
       /* if the user already has an account registered with their employee id */
       if (existingUser) {
@@ -261,65 +275,53 @@ export default class UserRouter {
           message:
             'Sorry, it looks as if there is already an account associated with that employee number'
         });
-      }
-
-      /* generate a verify token for the user */
-      randomBytes(24, (err, buffer) => {
-        if (err) {
-          return next(err);
-        }
-        const verifyToken = buffer.toString('hex');
-        /* create a new user since an existing one wasn't found */
-        const user = new User({
+      } else {
+        /* create a new user */
+        const newUser = await new User({
           email,
           employeeNumber,
           password,
           storeNumber,
-          confirmationEmailToken: verifyToken,
+          confirmationEmailToken: await genToken(24),
           profile: { firstName, lastName }
-        });
-
-        user.save((err, user) => {
-          if (err) {
-            return next(err);
-          }
-
-          const emailData = {
-            to: user.email,
-            from: FROM_EMAIL,
-            subject: 'Quantified Account Confirmation',
-            text:
-              'You are receiving this because you (or someone else) have requested an account with Quantified.\n\n' +
-              'Please click on the following link, or paste this into your browser to complete the process:\n\n' +
-              `${CLIENT_URL}/confirm-email/${verifyToken}\n\n` +
-              `If you did not request this, please ignore this email.\n`
-          };
-          /* don't send a confirmation email when testing / development, but return the same result */
-          if (
-            process.env.NODE_ENV === 'test' ||
-            process.env.NODE_ENV === 'development'
-          ) {
-            return res.status(201).json({
-              user,
-              message:
-                'Your account has been created, now please check your work email to confirm your account.',
-              status: res.status
-            });
-          } else {
-            transporter.sendMail(emailData, (error, info) => {
-              error
-                ? console.log(error)
-                : res.status(201).json({
-                    user,
-                    message:
-                      'Your account has been created, now please check your work email to confirm your account.',
-                    status: res.status
-                  });
-            });
-          }
-        });
-      });
-    });
+        }).save();
+        const emailData = {
+          to: newUser.email,
+          from: FROM_EMAIL,
+          subject: 'Quantified Account Confirmation',
+          text:
+            'You are receiving this because you (or someone else) have requested an account with Quantified.\n\n' +
+            'Please click on the following link, or paste this into your browser to complete the process:\n\n' +
+            `${CLIENT_URL}/confirm-email/${newUser.confirmationEmailToken}\n\n` +
+            `If you did not request this, please ignore this email.\n`
+        };
+        /* don't send a confirmation email when testing / development, but return the same result */
+        if (
+          process.env.NODE_ENV === 'test' ||
+          process.env.NODE_ENV === 'development'
+        ) {
+          res.status(201).json({
+            newUser,
+            message:
+              'Your account has been created, now please check your work email to confirm your account.',
+            status: res.status
+          });
+        } else {
+          transporter.sendMail(emailData, (error, info) => {
+            error
+              ? console.log(error)
+              : res.status(201).json({
+                  newUser,
+                  message:
+                    'Your account has been created, now please check your work email to confirm your account.',
+                  status: res.status
+                });
+          });
+        }
+      }
+    } catch (err) {
+      console.error(err);
+    }
   }
 
   /* delete an existing user by the id params */
@@ -347,84 +349,95 @@ export default class UserRouter {
   }
 
   /* update an existing user by the id params */
-  public updateById(req: Request, res: Response, next?: NextFunction): void {
-    const updated = {};
-    const mutableFields = ['profile', 'storeNumber', 'password'];
-    const immutableFields = [
-      'email',
-      'employeeNumber',
-      'role',
-      'resetPasswordToken',
-      'resetPasswordExpires',
-      'confirmationEmailToken',
-      'isVerified',
-      'created'
-    ];
+  public async updateById(
+    req: Request,
+    res: Response,
+    next?: NextFunction
+  ): Promise<any> {
+    try {
+      /* get user that will be updated */
+      const userToUpdate = await User.findById(req.params.id);
 
-    /* Check that the user isn't submitting update params that are restricted */
-    immutableFields.forEach(field => {
-      if (field in req.body) {
-        return res.status(401).json({
-          status: res.status,
-          message: "Sorry, you can't update those settings on your account"
+      const updated = {};
+      const mutableFields = ['profile', 'storeNumber', 'password'];
+      const immutableFields = [
+        'email',
+        'employeeNumber',
+        'role',
+        'resetPasswordToken',
+        'resetPasswordExpires',
+        'confirmationEmailToken',
+        'isVerified',
+        'created'
+      ];
+
+      /* Check that the user isn't submitting update params that are restricted */
+      const fieldsRequestedToUpdate = Object.keys(req.body);
+      const errors = immutableFields.filter(field =>
+        fieldsRequestedToUpdate.includes(field)
+      );
+
+      /* If there are errors, respond with an error else, accumulate new user
+       * object with props sent in from the request body and set on user & save
+       */
+      if (errors.length > 0) {
+        res.status(401).json({
+          message: "You can't update those fields, brother"
         });
+      } else {
+        mutableFields.forEach(field => {
+          if (field in req.body) {
+            updated[field] = req.body[field];
+          }
+        });
+
+        await User.update(req.params.id, { $set: updated }, { new: true });
+
+        userToUpdate === null
+          ? res.status(404).json({
+              status: res.status,
+              message: 'Whom are you looking for anyway my guy?'
+            })
+          : res.status(201).json({
+              status: res.status,
+              message: `${userToUpdate.profile.firstName} ${userToUpdate.profile
+                .lastName} has updated their account`
+            });
       }
-    });
-
-    /* Accumulates new user object with props send in from the request body */
-    mutableFields.forEach(field => {
-      if (field in req.body) {
-        updated[field] = req.body[field];
-      }
-    });
-
-    User.findByIdAndUpdate(req.params.id, { $set: updated }, { new: true })
-      .exec()
-      .then(userObject => {
-        if (userObject == null) {
-          return res.status(404).json({
-            status: res.status,
-            message: 'Whom are you looking for anyway my guy?'
-          });
-        }
-        res.status(201).json({
-          status: res.status,
-          message: `${userObject.profile.firstName} ${userObject.profile
-            .lastName} has updated their account`
-        });
-      })
-      .catch(err => {
-        res.status(404).json({
-          status: res.status,
-          message: 'Who are you looking for anyway?'
-        });
-      });
+    } catch (err) {
+      console.log(err);
+    }
   }
 
   /* verify an existing users account */
-  public verifyEmail(req: Request, res: Response, next?: NextFunction): void {
-    User.findOne(
-      { confirmationEmailToken: req.params.token },
-      (err, existingUser) => {
-        if (!existingUser) {
-          return res.status(422).json({
-            status: res.status,
-            message: 'Account not found'
-          });
-        } else {
-          /* if a user is found, flip the verified flag and set auth headers */
-          existingUser.isVerified = true;
-          existingUser.save(err => {
-            if (err) return next(err);
-            const userInfo = setUserInfo(existingUser);
-            return res.status(200).json({
-              token: `JWT ${generateJWT(userInfo)}`,
-              user: userInfo
-            });
-          });
-        }
+  public async verifyEmail(
+    req: Request,
+    res: Response,
+    next?: NextFunction
+  ): Promise<any> {
+    try {
+      const existingUser = await User.findOne({
+        confirmationEmailToken: req.params.token
+      });
+      if (!existingUser) {
+        res.status(422).json({
+          status: res.status,
+          message: 'Account not found'
+        });
+      } else {
+        /* if a user is found, flip the verified flag, save the document, and set auth headers */
+        existingUser.isVerified = true;
+
+        const updatedUser = await existingUser.save();
+        const userInfo = setUserInfo(updatedUser);
+        res.status(200).json({
+          token: `JWT ${generateJWT(userInfo)}`,
+          user: userInfo
+        });
       }
-    );
+    } catch (err) {
+      console.error(err);
+    }
   }
 
   /* forgot password handler for existing users */

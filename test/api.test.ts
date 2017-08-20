@@ -155,11 +155,11 @@ describe('The API', () => {
           storeNumber: newUser.storeNumber
         })
         .then(res => {
-          const newUser = res.body.user;
+          const { newUser } = res.body;
           res.should.be.json;
           res.body.should.exist;
           res.body.should.be.an('object');
-          res.body.should.contain.keys('message', 'user');
+          res.body.should.contain.keys('message', 'newUser');
           return newUser;
         })
         .then(newUser => {
@@ -307,10 +307,13 @@ describe('The API', () => {
           });
       });
     });
-    it("should return an error if the user with the requested id doesn't exist", () => {
-      const pathToNonExistentUser = '/api/v1/users/1460';
+    it("should return an error if the user with the requested id doesn't exist", async () => {
+      const existingUser = await User.findOne();
+      const pathToNonExistentUser = `/api/v1/users/${existingUser.id}`;
+
+      await existingUser.remove();
       const dataToUpdate = {
-        id: '',
+        id: null,
         profile: {
           firstName: 'Clarice',
           lastName: 'Thompson'
@@ -339,7 +342,7 @@ describe('The API', () => {
         employeeNumber: '1075394',
         role: 'Admin',
         isVerified: true,
-        id: ''
+        id: null
       };
       return User.findOne().then(userObject => {
         dataToUpdate.id = userObject.id;

@@ -1,9 +1,8 @@
-import { Global } from 'NodeJS';
 require('dotenv').config();
 require('dotenv').load();
 
 import Api from './Api';
-import * as mongoose from 'mongoose';
+const mongoose = require('mongoose');
 
 /* Instantiate our app instance */
 const app: Api = new Api();
