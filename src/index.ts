@@ -2,7 +2,7 @@ require('dotenv').config();
 require('dotenv').load();
 
 import Api from './Api';
-const mongoose = require('mongoose');
+import * as mongoose from 'mongoose';
 
 /* Instantiate our app instance */
 const app: Api = new Api();
@@ -13,29 +13,32 @@ const env = app.currentEnv();
 let DATABASE_URL;
 let PORT;
 
-env === 'development' || 'test'
-  ? (DATABASE_URL = process.env.TEST_DATABASE_URL)
-  : (DATABASE_URL = process.env.MONGODB_URI);
+/* set environment variables */
+if (env === 'production') {
+  DATABASE_URL = process.env.MONGODB_URI;
+  PORT = process.env.PORT;
+} else {
+  DATABASE_URL = process.env.TEST_DATABASE_URL;
+  PORT = 3000;
+}
 
-env === 'development' || 'test' ? (PORT = 3000) : (PORT = process.env.PORT);
-
-/* Set mongoose promise to native ES6 promise */
-mongoose.Promise = global.Promise;
-
+const connectOptions = {
+  useMongoClient: true,
+  keepAlive: true,
+  reconnectTries: Number.MAX_VALUE
+};
 /* Both runServer and closeServer need access to the server var,
  * so it's declared outside of both function.
  */
 let server;
 
-// TAKES A DATABASE URL AS AN ARGUMENT. NEEDED FOR INTEGRATION TESTS. DEFAULTS TO THE MAIN URL.
-export const runServer = (
+export const runServer = async (
   databaseUrl: string = DATABASE_URL,
   port: number | string = PORT
-) =>
-  new Promise((resolve, reject) => {
-    mongoose.connect(databaseUrl, { useMongoClient: true }, err => {
-      if (err) return reject(err);
-
+) => {
+  try {
+    await mongoose.connect(databaseUrl, connectOptions);
+    await new Promise((resolve, reject) => {
       server = app.express
         .listen(port, () => {
           console.info(
@@ -48,18 +51,25 @@ export const runServer = (
           reject(err);
         });
     });
-  });
+  } catch (err) {
+    console.error(err);
+  }
+};
 
-export const closeServer = () =>
-  mongoose.disconnect().then(() => {
-    return new Promise((resolve, reject) => {
+export const closeServer = async () => {
+  try {
+    await mongoose.disconnect();
+    await new Promise((resolve, reject) => {
       console.info(`Closing server. Goodbye old friend.`);
       server.close(err => {
         if (err) return reject(err);
         return resolve();
       });
     });
-  });
+  } catch (err) {
+    console.error('error');
+  }
+};
 
 if (require.main === module) {
   runServer().catch(err => console.error(err));

@@ -13,8 +13,6 @@ import { IError, MappedError, IUser } from '../interfaces/index';
 
 /* Constants */
 const JWT_SECRET = process.env.JWT_SECRET;
-const SMTP_USER = process.env.SMTP_USER;
-const SMTP_PASS = process.env.SMTP_PASS;
 const FROM_EMAIL = process.env.FROM_EMAIL;
 const SMTP_URL = process.env.SMTP_URL;
 const CLIENT_URL = process.env.CLIENT_URL;
