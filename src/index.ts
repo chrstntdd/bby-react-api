@@ -1,3 +1,4 @@
+import { Global } from 'NodeJS';
 require('dotenv').config();
 require('dotenv').load();
 
@@ -22,11 +23,15 @@ if (env === 'production') {
   PORT = 3000;
 }
 
+/* Set mongoose promise to native ES6 promise */
+mongoose.Promise = global.Promise;
+
 const connectOptions = {
   useMongoClient: true,
   keepAlive: true,
   reconnectTries: Number.MAX_VALUE
 };
+
 /* Both runServer and closeServer need access to the server var,
  * so it's declared outside of both function.
  */
