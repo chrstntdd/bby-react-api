@@ -50,6 +50,13 @@ export default class Api {
     this.express.use(bodyParser.urlencoded({ extended: false }));
     this.express.use(passport.initialize());
     this.express.use(expressValidator());
+    this.express.use((err, req, res, next) => {
+      console.error(err);
+      res.status(err.status || 500).json({
+        message: err.message,
+        error: err
+      });
+    });
   }
 
   /* connect resource routers */

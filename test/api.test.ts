@@ -26,17 +26,15 @@ import { runServer, closeServer } from '../src/index';
 import User = require('../src/models/user');
 const TEST_DATABASE_URL = process.env.TEST_DATABASE_URL;
 
-const seedUsers = testData => {
-  return User.insertMany(testData)
-    .then(data => {
-      return;
-    })
-    .catch(err => {
-      console.log(err);
-    });
+const seedUsers = async testData => {
+  try {
+    await User.insertMany(testData);
+  } catch (err) {
+    console.error(err);
+  }
 };
 
-const tearDownDb = () => mongoose.connection.dropDatabase();
+const tearDownDb = async () => await mongoose.connection.dropDatabase();
 
 describe('The API', () => {
   before(() => runServer(TEST_DATABASE_URL));
@@ -111,20 +109,18 @@ describe('The API', () => {
         });
       });
     });
-    it('should 400 for a request containing a nonexistent id', () => {
-      return chai
-        .request(app)
-        .get(`/api/v1/users/42`)
-        .then(res => {
-          res.status.should.equal(400);
-        })
-        .catch(err => {
-          err.response.error;
-          err.response.error.status.should.equal(400);
-          err.response.body.message.should.equal(
-            `No user found with the id: 42`
-          );
-        });
+    it('should 400 for a request containing a nonexistent id', async () => {
+      const newId = mongoose.Types.ObjectId();
+      try {
+        let res;
+        res = await chai.request(app).get(`/api/v1/users/${newId}`);
+      } catch (err) {
+        err.should.exist;
+        err.status.should.equal(404);
+        const errorMsg = JSON.parse(err.response.error.text);
+        errorMsg.should.be.an('object');
+        errorMsg.should.contain.keys('error');
+      }
     });
   });
 
@@ -254,20 +250,18 @@ describe('The API', () => {
           });
       });
     });
-    it("should return an error if the user with the requested id doesn't  exist", () => {
-      return User.findOne().then(userObject => {
-        const pathToNonExistentUser = '/api/v1/users/1337';
-        return chai
-          .request(app)
-          .del(pathToNonExistentUser)
-          .then(res => {
-            res.status.should.equal(400);
-          })
-          .catch(err => {
-            err.response.error.path.should.equal(pathToNonExistentUser);
-            err.response.error.status.should.equal(400);
-          });
-      });
+    it("should return an error if the user with the requested id doesn't  exist", async () => {
+      try {
+        const newId = mongoose.Types.ObjectId();
+        let res;
+        res = await chai.request(app).del(`/api/v1/users/${newId}`);
+      } catch (err) {
+        err.should.exist;
+        err.status.should.equal(404);
+        const errorMsg = JSON.parse(err.response.error.text);
+        errorMsg.should.be.an('object');
+        errorMsg.should.contain.keys('error');
+      }
     });
   });
 
@@ -308,35 +302,33 @@ describe('The API', () => {
       });
     });
     it("should return an error if the user with the requested id doesn't exist", async () => {
-      const existingUser = await User.findOne();
-      const pathToNonExistentUser = `/api/v1/users/${existingUser.id}`;
+      try {
+        const newId = mongoose.Types.ObjectId();
+        const pathToNonExistentUser = `/api/v1/users/${newId}`;
+        const dataToUpdate = {
+          id: null,
+          profile: {
+            firstName: 'Clarice',
+            lastName: 'Thompson'
+          },
+          storeNumber: 420,
+          password: 'supersecret password'
+        };
 
-      await existingUser.remove();
-      const dataToUpdate = {
-        id: null,
-        profile: {
-          firstName: 'Clarice',
-          lastName: 'Thompson'
-        },
-        storeNumber: 420,
-        password: 'supersecret password'
-      };
-      return User.findOne().then(userObject => {
-        dataToUpdate.id = userObject.id;
-        return chai
+        let res;
+        res = await chai
           .request(app)
           .put(pathToNonExistentUser)
-          .send(dataToUpdate)
-          .then(res => {
-            res.status.should.equal(404);
-          })
-          .catch(err => {
-            err.should.exist;
-            err.response.error.path.should.equal(pathToNonExistentUser);
-            err.response.error.status.should.equal(404);
-          });
-      });
+          .send(dataToUpdate);
+      } catch (err) {
+        err.should.exist;
+        err.status.should.equal(404);
+        const errorMsg = JSON.parse(err.response.error.text);
+        errorMsg.should.be.an('object');
+        errorMsg.should.contain.keys('error');
+      }
     });
+
     it('should reject updates to restricted props', () => {
       const dataToUpdate = {
         employeeNumber: '1075394',
@@ -399,46 +391,42 @@ describe('The API', () => {
 
   /* Forgot password handler */
   describe('POST /api/v1/users/forgot-password - handle sending forgot password email', () => {
-    it('should set a reset token on the users account', () => {
-      return User.findOne().then(userObject => {
-        const initialToken = userObject.resetPasswordToken;
-        const { email } = userObject;
-        return chai
-          .request(app)
-          .post('/api/v1/users/forgot-password')
-          .send({ email })
-          .then(res => {
-            const newToken = res.body.resetToken;
-            res.should.exist;
-            res.should.be.json;
-            res.status.should.equal(200);
-            res.body.should.contain.keys('resetToken', 'message');
-            return newToken;
-          })
-          .then(newToken => {
-            return chai
-              .request(app)
-              .get(`/api/v1/users/${userObject._id}`)
-              .then(res => {
-                res.body.resetPasswordToken.should.equal(newToken);
-              });
-          });
-      });
+    it('should set a reset token on the users account', async () => {
+      let existingUser;
+      let res;
+      let updatedUser;
+      existingUser = await User.findOne();
+
+      const { _id, email, resetPasswordToken } = existingUser;
+
+      res = await chai
+        .request(app)
+        .post('/api/v1/users/forgot-password')
+        .send({ email });
+      res.should.exist;
+      res.should.be.json;
+      res.status.should.equal(200);
+      res.body.should.contain.keys('message');
+
+      updatedUser = await User.findById(_id);
+
+      updatedUser.resetPasswordToken.should.not.equal(resetPasswordToken);
+      updatedUser.resetPasswordToken.should.be.a('string');
     });
     it('should return an error message if the email is blank', () => {
       return chai
         .request(app)
         .post('/api/v1/users/forgot-password')
         .then(res => {
-          res.status.should.equal(406);
+          res.status.should.equal(400);
         })
         .catch(err => {
           err.should.exist;
-          err.status.should.equal(406);
+          err.status.should.equal(400);
           const validationMsg = JSON.parse(err.response.error.text);
           validationMsg.should.be.an('object');
-          validationMsg.messages.should.be.an('array');
-          validationMsg.messages.should.have.length.of.at.least(1);
+          validationMsg.validationErrors.should.be.an('array');
+          validationMsg.validationErrors.should.have.length.of.at.least(1);
         });
     });
     it('should return an error message if the email is invalid', () => {
@@ -448,16 +436,16 @@ describe('The API', () => {
         .post('/api/v1/users/forgot-password')
         .send({ email: invalidEmail })
         .then(res => {
-          res.status.should.equal(406);
+          res.status.should.equal(400);
         })
         .catch(err => {
           err.should.exist;
-          err.status.should.equal(406);
+          err.status.should.equal(400);
           const validationMsg = JSON.parse(err.response.error.text);
           validationMsg.should.be.an('object');
-          validationMsg.messages.should.be.an('array');
-          validationMsg.messages.should.have.length.of.at.least(1);
-          validationMsg.messages[0].value.should.equal(invalidEmail);
+          validationMsg.validationErrors.should.be.an('array');
+          validationMsg.validationErrors.should.have.length.of.at.least(1);
+          validationMsg.validationErrors[0].value.should.equal(invalidEmail);
         });
     });
     it("should return an error message if the user can't be found with the supplied email", () => {
@@ -467,46 +455,38 @@ describe('The API', () => {
         .send({ email: 'a1075394@bestbuy.com' })
         .then(res => {
           res.should.exist;
-          res.status.should.equal(422);
+          res.status.should.equal(404);
         })
         .catch(err => {
           err.should.exist;
-          err.status.should.equal(422);
+          err.status.should.equal(404);
           const validationMsg = JSON.parse(err.response.error.text);
           validationMsg.should.be.an('object');
-          validationMsg.messages.should.be.a('string');
+          validationMsg.error.should.be.a('string');
         });
     });
   });
 
   /* Reset password handler */
   describe('POST /api/v1/users/reset-password/:token - handle setting new password and resetting reset tokens', () => {
-    it('should allow existing users to reset their password', () => {
-      return User.findOne().then(userObject => {
-        const { email } = userObject;
-        return chai
-          .request(app)
-          .post('/api/v1/users/forgot-password')
-          .send({ email })
-          .then(res => {
-            res.should.exist;
-            res.should.be.json;
-            res.status.should.equal(200);
-            const userResetToken = res.body.resetToken;
-            return userResetToken;
-          })
-          .then(userResetToken => {
-            return chai
-              .request(app)
-              .post(`/api/v1/users/reset-password/${userResetToken}`)
-              .send({ password: 'superSecretNewPassword' })
-              .then(res => {
-                res.should.exist;
-                res.should.be.json;
-                res.status.should.equal(200);
-              });
-          });
-      });
+    it('should allow existing users to reset their password', async () => {
+      let existingUser;
+      let updatedUser;
+      let savedUser;
+
+      existingUser = await User.findOne();
+      const { resetPasswordToken, password, _id } = existingUser;
+
+      updatedUser = await chai
+        .request(app)
+        .post(`/api/v1/users/reset-password/${resetPasswordToken}`)
+        .send({ password: 'superSecretPassword' });
+
+      updatedUser.should.exist;
+      updatedUser.should.be.json;
+
+      savedUser = await User.findById(_id);
+      savedUser.password.should.not.equal(password);
     });
     it("should return an error if the token doesn't match an existing user", () => {
       return User.findOne().then(userObject => {
