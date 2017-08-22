@@ -297,14 +297,13 @@ export default class UserRouter {
           `If you did not request this, please ignore this email.\n`
       };
       /* don't send a confirmation email when testing / development, but return the same result */
-      if (process.env.NODE_ENV === 'development') {
+      if (process.env.NODE_ENV === 'production') {
+        await transporter.sendMail(emailData);
         res.status(201).json({
           message:
             'Your account has been created, now please check your work email to confirm your account.'
         });
       } else {
-        await transporter.sendMail(emailData);
-
         res.status(201).json({
           message:
             'Your account has been created, now please check your work email to confirm your account.'
