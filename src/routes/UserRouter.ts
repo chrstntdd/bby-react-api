@@ -285,6 +285,7 @@ export default class UserRouter {
         confirmationEmailToken: await genToken(24),
         profile: { firstName, lastName }
       }).save();
+
       const emailData = {
         to: newUser.email,
         from: FROM_EMAIL,
@@ -298,19 +299,15 @@ export default class UserRouter {
       /* don't send a confirmation email when testing / development, but return the same result */
       if (process.env.NODE_ENV === 'development') {
         res.status(201).json({
-          newUser,
           message:
-            'Your account has been created, now please check your work email to confirm your account.',
-          status: res.status
+            'Your account has been created, now please check your work email to confirm your account.'
         });
       } else {
         await transporter.sendMail(emailData);
 
         res.status(201).json({
-          newUser,
           message:
-            'Your account has been created, now please check your work email to confirm your account.',
-          status: res.status
+            'Your account has been created, now please check your work email to confirm your account.'
         });
       }
     }
@@ -476,11 +473,13 @@ export default class UserRouter {
         if (process.env.NODE_ENV === 'production') {
           await transporter.sendMail(emailData);
           res.status(200).json({
+            resetToken: resetPasswordToken,
             message:
               'Thank you. Please check your work email for a message containing the link to reset your password.'
           });
         } else {
           res.status(200).json({
+            resetToken: resetPasswordToken,
             message:
               'Thank you. Please check your work email for a message containing the link to reset your password.'
           });
@@ -495,13 +494,14 @@ export default class UserRouter {
     res: Response,
     next?: NextFunction
   ): Promise<any> {
-    const existingUser = await User.findOne({
+    let existingUser;
+    existingUser = await User.findOne({
       resetPasswordToken: req.params.token,
       resetPasswordExpires: { $gt: Date.now() }
     });
 
-    if (!existingUser) {
-      res.status(422).json({
+    if (existingUser === null) {
+      res.status(400).json({
         message:
           'Whoops! It looks like your reset token has already expired. Please try to reset your password again.'
       });

@@ -136,37 +136,27 @@ describe('The API', () => {
       'storeNumber'
     ];
 
-    it('should create a new user when all the required fields are submitted', () => {
+    it('should create a new user when all the required fields are submitted', async () => {
       const newUser = generateNewUser();
-      return chai
-        .request(app)
-        .post('/api/v1/users')
-        .send({
-          email: newUser.email,
-          password: newUser.password,
-          confirmPassword: newUser.password,
-          firstName: newUser.firstName,
-          lastName: newUser.lastName,
-          employeeNumber: newUser.employeeNumber,
-          storeNumber: newUser.storeNumber
-        })
-        .then(res => {
-          const { newUser } = res.body;
-          res.should.be.json;
-          res.body.should.exist;
-          res.body.should.be.an('object');
-          res.body.should.contain.keys('message', 'newUser');
-          return newUser;
-        })
-        .then(newUser => {
-          /* check that user now exists in the DB with another get request */
-          const { _id } = newUser;
-          return chai.request(app).get(`/api/v1/users/${_id}`).then(res => {
-            res.should.exist;
-            res.should.be.json;
-            res.body._id.should.equal(_id);
-          });
-        });
+      let res;
+      res = await chai.request(app).post('/api/v1/users').send({
+        email: newUser.email,
+        password: newUser.password,
+        confirmPassword: newUser.password,
+        firstName: newUser.firstName,
+        lastName: newUser.lastName,
+        employeeNumber: newUser.employeeNumber,
+        storeNumber: newUser.storeNumber
+      });
+      res.should.exist;
+      res.should.be.json;
+      res.status.should.equal(201);
+      res.body.should.contain.keys('message');
+      res.body.message.should.be.a('string');
+
+      let createdUser;
+      createdUser = await User.findOne({ email: newUser.email });
+      createdUser.should.exist;
     });
     it('should 409 for a existing user trying to register with valid credentials', () => {
       return User.findOne().then(userObject => {
@@ -471,22 +461,30 @@ describe('The API', () => {
   describe('POST /api/v1/users/reset-password/:token - handle setting new password and resetting reset tokens', () => {
     it('should allow existing users to reset their password', async () => {
       let existingUser;
-      let updatedUser;
-      let savedUser;
 
       existingUser = await User.findOne();
-      const { resetPasswordToken, password, _id } = existingUser;
+      const { email } = existingUser;
 
-      updatedUser = await chai
+      /* make request to reset password */
+      const forgotPasswordRes = await chai
         .request(app)
-        .post(`/api/v1/users/reset-password/${resetPasswordToken}`)
+        .post('/api/v1/users/forgot-password')
+        .send({ email });
+
+      /* forgot password should succeed */
+      forgotPasswordRes.should.exist;
+      forgotPasswordRes.should.be.json;
+      forgotPasswordRes.status.should.equal(200);
+      const { resetToken } = forgotPasswordRes.body;
+
+      const resetPasswordRes = await chai
+        .request(app)
+        .post(`/api/v1/users/reset-password/${resetToken}`)
         .send({ password: 'superSecretPassword' });
 
-      updatedUser.should.exist;
-      updatedUser.should.be.json;
-
-      savedUser = await User.findById(_id);
-      savedUser.password.should.not.equal(password);
+      resetPasswordRes.should.exist;
+      resetPasswordRes.should.be.json;
+      resetPasswordRes.status.should.equal(200);
     });
     it("should return an error if the token doesn't match an existing user", () => {
       return User.findOne().then(userObject => {
@@ -509,11 +507,11 @@ describe('The API', () => {
               .send({ password: 'altSecretPassword' })
               .then(res => {
                 res.should.exist;
-                res.status.should.equal(422);
+                res.status.should.equal(400);
               })
               .catch(err => {
                 err.should.exist;
-                err.status.should.equal(422);
+                err.status.should.equal(400);
                 const errorMsg = JSON.parse(err.response.error.text);
                 errorMsg.message.should.be.a('string');
               });
