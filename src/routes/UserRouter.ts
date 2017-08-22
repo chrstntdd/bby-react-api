@@ -39,7 +39,7 @@ const setUserInfo = user => ({
  * it will go into the .catch on line 4 and be passed to next which will
  * eventually give the error to our express error middleware to handle. 
  */
-const asyncMiddleware = fn => (
+export const asyncMiddleware = fn => (
   req: Request,
   res: Response,
   next?: NextFunction
