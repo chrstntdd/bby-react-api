@@ -126,7 +126,7 @@ export default class UserRouter {
     req.checkBody('email', 'Please enter an email').notEmpty();
 
     req.checkBody('password', 'Please enter a password.').notEmpty();
-    req.checkBody('password', 'Please enter a valid password').isAlpha();
+    req.checkBody('password', 'Please enter a valid password').isAlphanumeric();
 
     req.sanitizeBody('email').normalizeEmail({
       all_lowercase: true

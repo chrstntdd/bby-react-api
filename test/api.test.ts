@@ -521,123 +521,155 @@ describe('The API', () => {
   });
 });
 
-describe('Fetching tables', () => {
+describe('Fetching tables', async () => {
+  let signedInUserJWT;
+  let signedInUserEmail;
   before(() => runServer(TEST_DATABASE_URL));
-  beforeEach(() => seedUsers(testData));
+  beforeEach(async () => {
+    const user = generateUser();
+    /* Raw username and password */
+    const { email, password } = user;
+    signedInUserEmail = email;
+    /* wait for the user to be created and saved */
+    await User.create(user);
+    /* get back the same user */
+    const newUser = await User.findOne({ email });
+    /* verify them */
+    newUser.isVerified = true;
+    await newUser.save();
+    const requestBody = {
+      email,
+      password
+    };
+    /* sign them in */
+    const signInResponse = await chai
+      .request(app)
+      .post('/api/v1/users/sign-in')
+      .send(requestBody);
+    signedInUserJWT = signInResponse.body.token;
+  });
   afterEach(() => tearDownDb());
   after(() => closeServer());
 
   /* get all tables for a user */
   describe('GET /api/v1/tables/:userId - get all tables for the user supplied in the req params', () => {
-    it('should return back all tables for an existing user', () => {
-      let userId;
-      return User.findOne().then(user => {
-        userId = user.id;
-        return chai.request(app).get(`/api/v1/tables/${userId}`).then(res => {
-          res.should.exist;
-          res.should.be.json;
-          res.status.should.equal(200);
-          res.body.should.be.an('array');
-          res.body.should.have.length.above(0);
-        });
-      });
+    it('should return back all tables for an existing user', async () => {
+      const user = await User.findOne({ email: signedInUserEmail });
+      const { id } = user;
+      const res = await chai
+        .request(app)
+        .get(`/api/v1/tables/${id}`)
+        .set({ Authorization: signedInUserJWT });
+      res.should.exist;
+      res.should.be.json;
+      res.status.should.equal(200);
+      res.body.should.be.an('array');
+      res.body.should.have.length.above(1);
     });
   });
   describe('GET /api/v1/tables/:userId/:tableId - return a table for the user specified by the req params', () => {
-    it('should return back a single table that matches the url params', () => {
-      let userId;
-      let tableId;
-      return User.findOne().then(userObject => {
-        userId = userObject.id;
-        tableId = userObject.tableData.tables[0].id;
-        return chai
-          .request(app)
-          .get(`/api/v1/tables/${userId}/${tableId}`)
-          .then(res => {
-            res.should.exist;
-            res.should.be.json;
-            res.status.should.equal(200);
-          });
-      });
+    it('should return back a single table that matches the url params', async () => {
+      const user = await User.findOne({ email: signedInUserEmail });
+      const { id } = user;
+      const tableId = user.tableData.tables[0].id;
+      const res = await chai
+        .request(app)
+        .get(`/api/v1/tables/${id}/${tableId}`)
+        .set({ Authorization: signedInUserJWT });
+      res.should.exist;
+      res.should.be.json;
+      res.status.should.equal(200);
+      res.body.products.should.be.an('array');
+      res.body.products.length.should.be.above(0);
+      res.body.products[0].should.contain.keys(
+        'name',
+        'sku',
+        'department',
+        'departmentId',
+        'modelNumber',
+        'classId',
+        'value',
+        'quantity',
+        'totalValue',
+        '_id'
+      );
     });
   });
   describe('POST /api/v1/tables/:userId - create a new table for the user specified by the req params and return it', () => {
-    it('should create a new blank table for the user and return it', () => {
-      let userId;
-      return User.findOne().then(userObject => {
-        userId = userObject.id;
-        return chai.request(app).post(`/api/v1/tables/${userId}`).then(res => {
-          res.should.exist;
-          res.should.be.json;
-          res.status.should.equal(201);
-          res.body.should.contain.keys('createdOn', 'createdBy', '_id');
-        });
-      });
+    it('should create a new blank table for the user and return it', async () => {
+      const user = await User.findOne({ email: signedInUserEmail });
+      const { id } = user;
+      const res = await chai
+        .request(app)
+        .post(`/api/v1/tables/${id}`)
+        .set({ Authorization: signedInUserJWT });
+      res.should.exist;
+      res.should.be.json;
+      res.status.should.equal(201);
+      res.body.should.contain.keys('createdOn', 'createdBy', '_id');
     });
   });
   describe('PUT /api/v1/tables/:userId/:tableId', () => {
-    it('should update the existing table in the DB with the products array sent in', () => {
-      let userId;
+    it('should update the existing table in the DB with the products array sent in', async () => {
       let tableId;
       let previousTableData;
       const newTable = generateTable();
       const newTableProducts = newTable.products;
-      const newProductUpcs: string[] = newTableProducts.map(product => {
+
+      const { products } = newTable;
+      const newProductUpcs: string[] = products.map(product => product.upc);
+
+      /* call DB to get back user info */
+      const user = await User.findOne({ email: signedInUserEmail });
+      const { id } = user;
+      previousTableData = user.tableData.tables[0].products;
+      tableId = user.tableData.tables[0].id;
+
+      const res = await chai
+        .request(app)
+        .put(`/api/v1/tables/${id}/${tableId}`)
+        .set({ Authorization: signedInUserJWT })
+        .send({ products: newTable.products });
+
+      res.should.exist;
+      res.should.be.json;
+      res.status.should.equal(201);
+
+      const updatedUser = await User.findOne({ email: signedInUserEmail });
+
+      const updatedTable = updatedUser.tableData.tables.id(tableId).products;
+      const updatedProductUpcs: string[] = newTableProducts.map(product => {
         return product.upc;
       });
-      return User.findOne().then(userObject => {
-        userId = userObject.id;
-        tableId = userObject.tableData.tables[0].id;
-        previousTableData = userObject.tableData.tables[0].products;
-        return chai
-          .request(app)
-          .put(`/api/v1/tables/${userId}/${tableId}`)
-          .send({ products: newTable.products })
-          .then(res => {
-            res.should.exist;
-            res.should.be.json;
-            res.status.should.equal(201);
-            return User.findById(userId);
-          })
-          .then(updatedUser => {
-            const updatedTable = updatedUser.tableData.tables.id(tableId)
-              .products;
-            const updatedProductUpcs: string[] = newTableProducts.map(
-              product => {
-                return product.upc;
-              }
-            );
 
-            /* test that the UPCs are the same since a regular check 
-               * on the tableObjects wouldn't be viable. This is because 
-               * when we PUT the new array in place of the old one, we
-               * remove all OLD instances of products from the 
-               * table - destroying the ID they once had. Since the tables 
-               * are only really concerned with UPCs as an ID, we 
-               * can hold onto those instead of the original copy of the 
-               * products array. This is much easier than deep comparing 
-               * two objects with a nested array */
-            updatedProductUpcs.should.deep.equal(newProductUpcs);
-          });
-      });
+      /* test that the UPCs are the same since a regular check 
+      * on the tableObjects wouldn't be viable. This is because 
+      * when we PUT the new array in place of the old one, we
+      * remove all OLD instances of products from the 
+      * table - destroying the ID they once had. Since the tables 
+      * are only really concerned with UPCs as an ID, we 
+      * can hold onto those instead of the original copy of the 
+      * products array. This is much easier than deep comparing 
+      * two objects with a nested array */
+      updatedProductUpcs.should.deep.equal(newProductUpcs);
     });
   });
+
   describe('DELETE /api/v1/tables/:userId/:tableId', () => {
-    it('should delete the table with the id specified in the req params', () => {
-      let userId;
+    it('should delete the table with the id specified in the req params', async () => {
       let tableId;
-      return User.findOne().then(userObject => {
-        userId = userObject.id;
-        tableId = userObject.tableData.tables[0].id;
-        return chai
-          .request(app)
-          .delete(`/api/v1/tables/${userId}/${tableId}`)
-          .then(res => {
-            res.should.exist;
-            res.should.be.json;
-            res.status.should.equal(202);
-          });
-      });
+      const user = await User.findOne();
+      const { id } = user;
+      tableId = user.tableData.tables[0].id;
+      const res = await chai
+        .request(app)
+        .delete(`/api/v1/tables/${id}/${tableId}`)
+        .set({ Authorization: signedInUserJWT })
+        .then(res => {
+          res.should.exist;
+          res.should.be.json;
+          res.status.should.equal(202);
+        });
     });
   });
 });
