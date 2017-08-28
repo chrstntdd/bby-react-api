@@ -13,11 +13,26 @@ import { IError, MappedError, IUser } from '../interfaces/index';
 
 /* Constants */
 const JWT_SECRET = process.env.JWT_SECRET;
-const FROM_EMAIL = process.env.FROM_EMAIL;
-const SMTP_URL = process.env.SMTP_URL;
 const CLIENT_URL = process.env.CLIENT_URL;
 
-const transporter = nodemailer.createTransport(SMTP_URL);
+/* EMAIL CONFIG */
+const FROM_EMAIL = process.env.FROM_EMAIL;
+const CLIENT_ID = process.env.CLIENT_ID;
+const CLIENT_SECRET = process.env.CLIENT_SECRET;
+const REFRESH_TOKEN = process.env.REFRESH_TOKEN;
+
+const transporter = nodemailer.createTransport({
+  host: 'smtp.gmail.com',
+  port: 465,
+  secure: true,
+  auth: {
+    type: 'Oauth2',
+    user: FROM_EMAIL,
+    clientId: CLIENT_ID,
+    clientSecret: CLIENT_SECRET,
+    refreshToken: REFRESH_TOKEN
+  }
+});
 
 /* Utility functions */
 const generateJWT = user => sign(user, JWT_SECRET, { expiresIn: '2h' });
@@ -32,12 +47,12 @@ const setUserInfo = user => ({
   tables: user.tableData.tables.map(table => table.id)
 });
 
-/* In our use case the function it will take is an express route handler, 
+/* In our use case the function it will take is an express route handler,
  * and since we are passing that handler into Promise.resolve it will
  * resolve with whatever value our route handler returns. If, however,
  * one of the await statements in our handler gives us a rejected promise,
  * it will go into the .catch on line 4 and be passed to next which will
- * eventually give the error to our express error middleware to handle. 
+ * eventually give the error to our express error middleware to handle.
  */
 export const asyncMiddleware = fn => (
   req: Request,
@@ -65,7 +80,7 @@ const passportService = require('../config/passport');
 
 const requireAuth = passport.authenticate('jwt', { session: false });
 
-/* 
+/*
 *
 * Main user router class
 * @path = /api/v1/users
@@ -81,7 +96,7 @@ export default class UserRouter {
     this.init();
   }
 
-  /* 
+  /*
   * Controllers for users
   * CRUD thru n thru
   */
@@ -173,7 +188,7 @@ export default class UserRouter {
         });
       }
 
-      /* return the user successfully after  generating a JWT for 
+      /* return the user successfully after  generating a JWT for
        * client authentication
        */
       const userInfo = setUserInfo(existingUser);
