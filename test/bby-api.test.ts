@@ -30,7 +30,7 @@ const tearDownDb = () => mongoose.connection.dropDatabase();
 let signedInUserJWT;
 let signedInUserEmail;
 
-describe.only('The Best Buy API', () => {
+describe('The Best Buy API', () => {
   before(() => runServer(TEST_DATABASE_URL));
   beforeEach(async () => {
     const user = generateUser();
