@@ -13,7 +13,6 @@ chai.use(chaiHttp);
 process.env.NODE_ENV = 'test';
 
 import { runServer, closeServer } from '../src/index';
-import Table = require('../src/models/table');
 import User = require('../src/models/user');
 const TEST_DATABASE_URL = process.env.TEST_DATABASE_URL;
 import { generateUser } from '../generateTestData.js';

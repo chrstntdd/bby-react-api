@@ -28,8 +28,7 @@ const setUserInfo = user => ({
   firstName: user.profile.firstName,
   lastName: user.profile.lastName,
   role: user.role,
-  isVerified: user.isVerified,
-  tables: user.tableData.tables.map(table => table.id)
+  isVerified: user.isVerified
 });
 
 /* In our use case the function it will take is an express route handler,
@@ -121,7 +120,7 @@ export default class UserRouter {
     res: Response,
     next?: NextFunction
   ): Promise<any> {
-    // * Sanitize and validate input */
+    /* Sanitize and validate input */
     req.checkBody('email', 'Please enter a valid email address').isEmail();
     req.checkBody('email', 'Please enter an email').notEmpty();
 
@@ -543,10 +542,53 @@ export default class UserRouter {
     }
   }
 
+  public async getSavedTable(
+    req: Request,
+    res: Response,
+    next?: NextFunction
+  ): Promise<void> {
+    const userId = req.params.id;
+    const user = await User.findById(userId);
+    /* get user and send back products */
+    res.status(200).json({
+      products: user.tableData.products
+    });
+  }
+
+  public async updateSavedTable(
+    req: Request,
+    res: Response,
+    next?: NextFunction
+  ): Promise<void> {
+    const { currentTableState } = req.body;
+    const userId = req.params.id;
+
+    const updatedUser = await User.findOneAndUpdate(
+      { _id: userId },
+      { $set: { 'tableData.products': currentTableState } },
+      { new: true }
+    );
+
+    res.status(201).json({
+      updatedUser,
+      message: 'Updated the table successfully!'
+    });
+  }
+
   /* attach route handlers to their endpoints */
   private init(): void {
     this.router.get('/', asyncMiddleware(this.getAll));
     this.router.get('/:id', asyncMiddleware(this.getById));
+    this.router.get(
+      '/:id/table',
+      requireAuth,
+      asyncMiddleware(this.getSavedTable)
+    );
+    this.router.put(
+      '/:id/table',
+      requireAuth,
+      asyncMiddleware(this.updateSavedTable)
+    );
     this.router.post('/', asyncMiddleware(this.createNew));
     this.router.post('/sign-in', asyncMiddleware(this.signIn));
     this.router.post('/verify-email/:token', asyncMiddleware(this.verifyEmail));
