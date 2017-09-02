@@ -6,7 +6,6 @@ import { Router, Request, Response, NextFunction } from 'express';
 import User = require('../models/user');
 import { sign } from 'jsonwebtoken';
 import { randomBytes } from 'crypto';
-import * as nodemailer from 'nodemailer';
 
 /* Interfaces */
 import { IError, MappedError, IUser } from '../interfaces/index';
@@ -17,22 +16,8 @@ const CLIENT_URL = process.env.CLIENT_URL;
 
 /* EMAIL CONFIG */
 const FROM_EMAIL = process.env.FROM_EMAIL;
-const CLIENT_ID = process.env.CLIENT_ID;
-const CLIENT_SECRET = process.env.CLIENT_SECRET;
-const REFRESH_TOKEN = process.env.REFRESH_TOKEN;
-
-const transporter = nodemailer.createTransport({
-  host: 'smtp.gmail.com',
-  port: 465,
-  secure: true,
-  auth: {
-    type: 'Oauth2',
-    user: FROM_EMAIL,
-    clientId: CLIENT_ID,
-    clientSecret: CLIENT_SECRET,
-    refreshToken: REFRESH_TOKEN
-  }
-});
+const sgMail = require('@sendgrid/mail');
+sgMail.setApiKey(process.env.SENDGRID_API_KEY);
 
 /* Utility functions */
 const generateJWT = user => sign(user, JWT_SECRET, { expiresIn: '2h' });
@@ -58,7 +43,7 @@ export const asyncMiddleware = fn => (
   req: Request,
   res: Response,
   next?: NextFunction
-): Promise<any> => Promise.resolve(fn(req, res, next)).catch(next);
+): Promise<void> => Promise.resolve(fn(req, res, next)).catch(next);
 
 /* generate a verify token for the user */
 const genToken = async (size): Promise<any> => {
@@ -106,7 +91,7 @@ export default class UserRouter {
     req: Request,
     res: Response,
     next?: NextFunction
-  ): Promise<any> {
+  ): Promise<void> {
     let allUsers;
     allUsers = await User.find();
     allUsers === null
@@ -119,7 +104,7 @@ export default class UserRouter {
     req: Request,
     res: Response,
     next?: NextFunction
-  ): Promise<any> {
+  ): Promise<void> {
     let user;
 
     user = await User.findById(req.params.id);
@@ -313,7 +298,7 @@ export default class UserRouter {
       };
       /* don't send a confirmation email when testing / development, but return the same result */
       if (process.env.NODE_ENV === 'production') {
-        await transporter.sendMail(emailData);
+        sgMail.send(emailData);
         res.status(201).json({
           message:
             'Your account has been created, now please check your work email to confirm your account.'
@@ -332,7 +317,7 @@ export default class UserRouter {
     req: Request,
     res: Response,
     next?: NextFunction
-  ): Promise<any> {
+  ): Promise<void> {
     let userToDelete;
     userToDelete = await User.findByIdAndRemove(req.params.id);
     userToDelete === null
@@ -350,7 +335,7 @@ export default class UserRouter {
     req: Request,
     res: Response,
     next?: NextFunction
-  ): Promise<any> {
+  ): Promise<void> {
     /* get user that will be updated */
     const userToUpdate = await User.findById(req.params.id);
 
@@ -410,7 +395,7 @@ export default class UserRouter {
     req: Request,
     res: Response,
     next?: NextFunction
-  ): Promise<any> {
+  ): Promise<void> {
     const existingUser = await User.findOne({
       confirmationEmailToken: req.params.token
     });
@@ -438,7 +423,7 @@ export default class UserRouter {
     req: Request,
     res: Response,
     next?: NextFunction
-  ): Promise<any> {
+  ): Promise<void> {
     /* Sanitize and validate input */
     req.checkBody('email', 'Please enter a valid email address').isEmail();
     req.checkBody('email', 'Please enter an email').notEmpty();
@@ -485,7 +470,7 @@ export default class UserRouter {
         };
 
         if (process.env.NODE_ENV === 'production') {
-          await transporter.sendMail(emailData);
+          sgMail.send(emailData);
           res.status(200).json({
             resetToken: resetPasswordToken,
             message:
@@ -507,7 +492,7 @@ export default class UserRouter {
     req: Request,
     res: Response,
     next?: NextFunction
-  ): Promise<any> {
+  ): Promise<void> {
     let existingUser;
     existingUser = await User.findOne({
       resetPasswordToken: req.params.token,
@@ -545,12 +530,12 @@ export default class UserRouter {
       };
 
       /* when testing / development, don't send a confirmation email */
-      if (process.env.NODE_ENV !== 'production') {
+      if (process.env.NODE_ENV === 'production') {
+        sgMail.send(emailData);
         res.status(200).json({
           message: 'Your password has been changed successfully'
         });
       } else {
-        await transporter.sendMail(emailData);
         res.status(200).json({
           message: 'Your password has been changed successfully'
         });

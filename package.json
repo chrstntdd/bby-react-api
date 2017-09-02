@@ -16,6 +16,7 @@
     "test": "mocha -c --reporter spec --compilers ts:ts-node/register --timeout 20000 "
   },
   "dependencies": {
+    "@sendgrid/mail": "^6.1.2",
     "bcrypt-nodejs": "^0.0.3",
     "bestbuy": "^1.1.0",
     "body-parser": "^1.17.2",
@@ -27,11 +28,8 @@
     "jsonwebtoken": "^7.4.1",
     "mongoose": "^4.11.4",
     "morgan": "^1.8.2",
-    "nodemailer": "^4.0.1",
-    "nodemailer-smtp-transport": "^2.7.4",
     "passport": "^0.3.2",
-    "passport-jwt": "^2.2.1",
-    "xoauth2": "^1.2.0"
+    "passport-jwt": "^2.2.1"
   },
   "devDependencies": {
     "@types/body-parser": "^1.16.4",
