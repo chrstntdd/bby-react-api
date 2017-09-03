@@ -1,7 +1,6 @@
 import * as mongoose from 'mongoose';
 import { compare, hash, genSalt } from 'bcrypt-nodejs';
-import Table = require('./table');
-import { ITable, TableSchema } from './table';
+import { ProductSchema } from './product';
 import { IUser } from '../interfaces';
 
 interface IUserModel extends IUser, mongoose.Document {}
@@ -52,7 +51,7 @@ const userSchema = new mongoose.Schema(
     },
     tableData: {
       tableMetadata: { type: String },
-      tables: [TableSchema]
+      products: [ProductSchema]
     }
   },
   {

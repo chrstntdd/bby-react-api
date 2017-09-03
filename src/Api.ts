@@ -8,7 +8,6 @@ import expressValidator = require('express-validator');
 /* import all routers */
 import UserRouter from './routes/UserRouter';
 import BestBuyRouter from './routes/BestBuyRouter';
-import TableRouter from './routes/TableRouter';
 
 export default class Api {
   /* reference to the express instance */
@@ -64,11 +63,9 @@ export default class Api {
     /* create an instance of the each of our routers */
     const userRouter = new UserRouter();
     const bestBuyRouter = new BestBuyRouter();
-    const tableRouter = new TableRouter();
 
     /* attach all routers to our express app */
     this.express.use(userRouter.path, userRouter.router);
     this.express.use(bestBuyRouter.path, bestBuyRouter.router);
-    this.express.use(tableRouter.path, tableRouter.router);
   }
 }

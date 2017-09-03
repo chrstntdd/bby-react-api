@@ -25,7 +25,7 @@ export interface IUser {
   isVerified: boolean;
   tableData: {
     tableMetadata: string;
-    tables: any;
+    products: any[];
   };
   comparePassword(cleanPassword: string, callback: any);
 }
