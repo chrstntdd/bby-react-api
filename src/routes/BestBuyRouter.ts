@@ -1,3 +1,4 @@
+require('dotenv').config();
 import { Request, Response, NextFunction, Router } from 'express';
 import { verify } from 'jsonwebtoken';
 import { IError, MappedError } from '../interfaces/index';

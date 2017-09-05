@@ -1,23 +1,26 @@
-import { ValidationSchema } from 'express-validator';
 require('dotenv').config();
-
+import { ValidationSchema } from 'express-validator';
 import { Router, Request, Response, NextFunction } from 'express';
-// tslint:disable-next-line:import-name
 import User = require('../models/user');
 import { sign } from 'jsonwebtoken';
 import { randomBytes } from 'crypto';
 
 /* Interfaces */
-import { IError, MappedError, IUser } from '../interfaces/index';
+import { MappedError, IUser } from '../interfaces/index';
 
 /* Constants */
 const JWT_SECRET = process.env.JWT_SECRET;
 const CLIENT_URL = process.env.CLIENT_URL;
 
 /* EMAIL CONFIG */
-const FROM_EMAIL = process.env.FROM_EMAIL;
+const SG_API_KEY = process.env.SENDGRID_API_KEY;
 const sgMail = require('@sendgrid/mail');
-sgMail.setApiKey(process.env.SENDGRID_API_KEY);
+sgMail.setApiKey(SG_API_KEY);
+
+/* Passport middleware */
+const passport = require('passport');
+const passportService = require('../config/passport');
+const requireAuth = passport.authenticate('jwt', { session: false });
 
 /* Utility functions */
 const generateJWT = user => sign(user, JWT_SECRET, { expiresIn: '2h' });
@@ -58,14 +61,7 @@ const genToken = async (size): Promise<any> => {
   });
 };
 
-/* Passport middleware */
-const passport = require('passport');
-const passportService = require('../config/passport');
-
-const requireAuth = passport.authenticate('jwt', { session: false });
-
 /*
-*
 * Main user router class
 * @path = /api/v1/users
 */
@@ -80,20 +76,14 @@ export default class UserRouter {
     this.init();
   }
 
-  /*
-  * Controllers for users
-  * CRUD thru n thru
-  */
-
   /* return all users */
   public async getAll(
     req: Request,
     res: Response,
     next?: NextFunction
   ): Promise<void> {
-    let allUsers;
-    allUsers = await User.find();
-    allUsers === null
+    const allUsers = await User.find();
+    !allUsers
       ? res.status(404).json({ error: 'There are no users' })
       : res.json(allUsers);
   }
@@ -104,10 +94,8 @@ export default class UserRouter {
     res: Response,
     next?: NextFunction
   ): Promise<void> {
-    let user;
-
-    user = await User.findById(req.params.id);
-    user === null
+    const user = await User.findById(req.params.id);
+    !user
       ? res.status(404).json({
           error: `The user with the id ${req.params.id} can't be found`
         })
@@ -247,12 +235,14 @@ export default class UserRouter {
     req.sanitizeBody('storeNumber').toInt(10);
 
     /* Assign validated and sanitized inputs to variables for later use */
-    const email = `${req.body.employeeNumber}@bestbuy.com`;
-    const firstName = req.body.firstName;
-    const lastName = req.body.lastName;
-    const password = req.body.password;
-    const employeeNumber = req.body.employeeNumber;
-    const storeNumber = req.body.storeNumber;
+    const {
+      firstName,
+      lastName,
+      password,
+      employeeNumber,
+      storeNumber
+    } = req.body;
+    const email = `${employeeNumber}@bestbuy.com`;
 
     /* Accumulate errors in result and return error if so */
     const validationResult = await req.getValidationResult();
@@ -264,8 +254,7 @@ export default class UserRouter {
     }
 
     /* await the call to check if the user exists already */
-    let existingUser;
-    existingUser = await User.findOne({ email });
+    const existingUser = await User.findOne({ email });
 
     /* if the user already has an account registered with their employee id */
     if (existingUser) {
@@ -287,7 +276,7 @@ export default class UserRouter {
 
       const emailData = {
         to: newUser.email,
-        from: FROM_EMAIL,
+        from: 'noreply@quantified',
         subject: 'Quantified Account Confirmation',
         text:
           'You are receiving this because you (or someone else) have requested an account with Quantified.\n\n' +
@@ -317,16 +306,18 @@ export default class UserRouter {
     res: Response,
     next?: NextFunction
   ): Promise<void> {
-    let userToDelete;
-    userToDelete = await User.findByIdAndRemove(req.params.id);
-    userToDelete === null
-      ? res.status(404).json({
-          error: `We cant find the user you\'re trying to delete 😐 `
-        })
-      : res.status(202).json({
-          message: `${userToDelete.profile.firstName} ${userToDelete.profile
-            .lastName} has been removed.`
-        });
+    const userToDelete = await User.findByIdAndRemove(req.params.id);
+
+    if (!userToDelete) {
+      res.status(404).json({
+        error: `We cant find the user you\'re trying to delete 😐 `
+      });
+    } else {
+      const { firstName, lastName } = userToDelete.profile;
+      res.status(202).json({
+        message: `${firstName} ${lastName} has been removed.`
+      });
+    }
   }
 
   /* update an existing user by the id params */
@@ -338,54 +329,56 @@ export default class UserRouter {
     /* get user that will be updated */
     const userToUpdate = await User.findById(req.params.id);
 
-    const updated = {};
-    const mutableFields = ['profile', 'storeNumber', 'password'];
-    const immutableFields = [
-      'email',
-      'employeeNumber',
-      'role',
-      'resetPasswordToken',
-      'resetPasswordExpires',
-      'confirmationEmailToken',
-      'isVerified',
-      'created'
-    ];
-
-    /* Check that the user isn't submitting update params that are restricted */
-    const fieldsRequestedToUpdate = Object.keys(req.body);
-    const errors = immutableFields.filter(field =>
-      fieldsRequestedToUpdate.includes(field)
-    );
-
-    /* If there are errors, respond with an error else, accumulate new user
-       * object with props sent in from the request body and set on user & save
-       */
-    if (errors.length > 0) {
-      res.status(401).json({
-        message: "You can't update those fields, brother"
+    if (!userToUpdate) {
+      res.status(404).json({
+        error: 'Whom are you looking for anyway my guy?'
       });
     } else {
-      mutableFields.forEach(field => {
-        if (field in req.body) {
-          updated[field] = req.body[field];
-        }
-      });
+      const { firstName, lastName } = userToUpdate.profile;
+      const updated = {};
+      const mutableFields = ['profile', 'storeNumber', 'password'];
+      const immutableFields = [
+        'email',
+        'employeeNumber',
+        'role',
+        'resetPasswordToken',
+        'resetPasswordExpires',
+        'confirmationEmailToken',
+        'isVerified',
+        'created'
+      ];
 
-      let updatedUser;
-      updatedUser = await User.update(
-        req.params.id,
-        { $set: updated },
-        { new: true }
+      /* Check that the user isn't submitting update params that are restricted */
+      const fieldsRequestedToUpdate = Object.keys(req.body);
+      const errors = immutableFields.filter(field =>
+        fieldsRequestedToUpdate.includes(field)
       );
 
-      userToUpdate === null
-        ? res.status(404).json({
-            error: 'Whom are you looking for anyway my guy?'
-          })
-        : res.status(201).json({
-            message: `${userToUpdate.profile.firstName} ${userToUpdate.profile
-              .lastName} has updated their account`
-          });
+      /* If there are errors, respond with an error else, accumulate new user
+         * object with props sent in from the request body and set on user & save
+         */
+      if (errors.length > 0) {
+        res.status(401).json({
+          message: "You can't update those fields, brother"
+        });
+      } else {
+        mutableFields.forEach(field => {
+          if (field in req.body) {
+            updated[field] = req.body[field];
+          }
+        });
+
+        let updatedUser;
+        updatedUser = await User.update(
+          req.params.id,
+          { $set: updated },
+          { new: true }
+        );
+
+        res.status(201).json({
+          message: `${firstName} ${lastName} has updated their account`
+        });
+      }
     }
   }
 
@@ -445,7 +438,7 @@ export default class UserRouter {
       let existingUser;
       existingUser = await User.findOne({ email: cleanEmail });
 
-      if (existingUser === null) {
+      if (!existingUser) {
         res
           .status(404)
           .json({ error: "We can't find the user you're looking for" });
@@ -459,7 +452,7 @@ export default class UserRouter {
 
         const emailData = {
           to: existingUser.email,
-          from: FROM_EMAIL,
+          from: 'noreply@quantified',
           subject: 'Quantified Password Reset',
           text:
             'You are receiving this because you (or someone else) have requested the reset of the password for your account.\n\n' +
@@ -492,13 +485,12 @@ export default class UserRouter {
     res: Response,
     next?: NextFunction
   ): Promise<void> {
-    let existingUser;
-    existingUser = await User.findOne({
+    const existingUser = await User.findOne({
       resetPasswordToken: req.params.token,
       resetPasswordExpires: { $gt: Date.now() }
     });
 
-    if (existingUser === null) {
+    if (!existingUser) {
       res.status(400).json({
         message:
           'Whoops! It looks like your reset token has already expired. Please try to reset your password again.'
@@ -521,7 +513,7 @@ export default class UserRouter {
       /* if password reset is successful, alert via email */
       const emailData = {
         to: existingUser.email,
-        from: FROM_EMAIL,
+        from: 'noreply@quantified',
         subject: 'Your Quantified password has been reset',
         text:
           'You are receiving this email because you changed your password. \n\n' +
@@ -549,10 +541,13 @@ export default class UserRouter {
   ): Promise<void> {
     const userId = req.params.id;
     const user = await User.findById(userId);
-    /* get user and send back products */
-    res.status(200).json({
-      products: user.tableData.products
-    });
+    !user
+      ? res.status(404).json({
+          error: "Can't seem to find those products you were looking for"
+        })
+      : res.status(200).json({
+          products: user.tableData.products
+        });
   }
 
   public async updateSavedTable(
@@ -569,10 +564,14 @@ export default class UserRouter {
       { new: true }
     );
 
-    res.status(201).json({
-      updatedUser,
-      message: 'Updated the table successfully!'
-    });
+    !updatedUser
+      ? res.status(404).json({
+          error: "Can't seem to find the user to update their table"
+        })
+      : res.status(201).json({
+          updatedUser,
+          message: 'Updated the table successfully!'
+        });
   }
 
   /* attach route handlers to their endpoints */
