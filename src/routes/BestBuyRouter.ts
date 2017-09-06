@@ -72,20 +72,29 @@ export default class BestBuyRouter {
       } else {
         /* success */
         const product = productsApiResponse.products[0];
+        const {
+          name,
+          sku,
+          upc,
+          department,
+          departmentId,
+          modelNumber,
+          classId,
+          salePrice
+        } = product;
 
-        const productDetails = {
-          name: product.name,
-          sku: product.sku,
-          upc: product.upc,
-          department: product.department,
-          departmentId: product.departmentId,
-          modelNumber: product.modelNumber,
-          classId: product.classId,
-          value: product.salePrice,
-          totalValue: product.salePrice,
+        res.status(200).json({
+          name,
+          sku,
+          upc,
+          department,
+          departmentId,
+          modelNumber,
+          classId,
+          value: salePrice,
+          totalValue: salePrice,
           quantity: 1
-        };
-        res.status(200).json(productDetails);
+        });
       }
     }
   }

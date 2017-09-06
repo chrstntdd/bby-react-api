@@ -285,18 +285,18 @@ export default class UserRouter {
           `If you did not request this, please ignore this email.\n`
       };
       /* don't send a confirmation email when testing / development, but return the same result */
-      // if (process.env.NODE_ENV === 'production') {
-      //   sgMail.send(emailData);
-      //   res.status(201).json({
-      //     message:
-      //       'Your account has been created, now please check your work email to confirm your account.'
-      //   });
-      // } else {
-      res.status(201).json({
-        message:
-          'Your account has been created, now please check your work email to confirm your account.'
-      });
-      // }
+      if (process.env.NODE_ENV === 'production') {
+        sgMail.send(emailData);
+        res.status(201).json({
+          message:
+            'Your account has been created, now please check your work email to confirm your account.'
+        });
+      } else {
+        res.status(201).json({
+          message:
+            'Your account has been created, now please check your work email to confirm your account.'
+        });
+      }
     }
   }
 
@@ -435,8 +435,7 @@ export default class UserRouter {
       res.status(400).json({ validationErrors });
     } else {
       /* get existing user */
-      let existingUser;
-      existingUser = await User.findOne({ email: cleanEmail });
+      const existingUser = await User.findOne({ email: cleanEmail });
 
       if (!existingUser) {
         res
