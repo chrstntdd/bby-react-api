@@ -13,9 +13,8 @@ const JWT_SECRET = process.env.JWT_SECRET;
 const CLIENT_URL = process.env.CLIENT_URL;
 
 /* EMAIL CONFIG */
-const SG_API_KEY = process.env.SENDGRID_API_KEY;
 const sgMail = require('@sendgrid/mail');
-sgMail.setApiKey(SG_API_KEY);
+sgMail.setApiKey(process.env.SENDGRID_API_KEY);
 
 /* Passport middleware */
 const passport = require('passport');
@@ -284,18 +283,36 @@ export default class UserRouter {
           `${CLIENT_URL}/confirm-email/${newUser.confirmationEmailToken}\n\n` +
           `If you did not request this, please ignore this email.\n`
       };
-      /* don't send a confirmation email when testing / development, but return the same result */
-      if (process.env.NODE_ENV === 'production') {
-        sgMail.send(emailData);
+      /* don't send a confirmation email when testing, but return the same result */
+      if (process.env.NODE_ENV === 'test') {
         res.status(201).json({
           message:
             'Your account has been created, now please check your work email to confirm your account.'
         });
       } else {
-        res.status(201).json({
-          message:
-            'Your account has been created, now please check your work email to confirm your account.'
-        });
+        try {
+          await sgMail.send(emailData);
+          res.status(201).json({
+            message:
+              'Thank you for signing up! Your account has been created, now please check your work email to confirm your account.'
+          });
+        } catch (error) {
+          console.error(error.toString());
+
+          // Extract error msg
+          const { message, code, response } = error;
+
+          // Extract response msg
+          const { headers, body } = response;
+
+          res.status(500).json({
+            message,
+            code,
+            response,
+            headers,
+            body
+          });
+        }
       }
     }
   }
@@ -460,19 +477,37 @@ export default class UserRouter {
             `If you did not request this, please ignore this email and your password will remain unchanged.\n`
         };
 
-        if (process.env.NODE_ENV === 'production') {
-          sgMail.send(emailData);
+        if (process.env.NODE_ENV === 'test') {
           res.status(200).json({
             resetToken: resetPasswordToken,
             message:
               'Thank you. Please check your work email for a message containing the link to reset your password.'
           });
         } else {
-          res.status(200).json({
-            resetToken: resetPasswordToken,
-            message:
-              'Thank you. Please check your work email for a message containing the link to reset your password.'
-          });
+          try {
+            await sgMail.send(emailData);
+            res.status(200).json({
+              resetToken: resetPasswordToken,
+              message:
+                'Thank you. Please check your work email for a message containing the link to reset your password.'
+            });
+          } catch (error) {
+            console.error(error.toString());
+
+            // Extract error msg
+            const { message, code, response } = error;
+
+            // Extract response msg
+            const { headers, body } = response;
+
+            res.status(500).json({
+              message,
+              code,
+              response,
+              headers,
+              body
+            });
+          }
         }
       }
     }
@@ -519,16 +554,35 @@ export default class UserRouter {
           'If you did not request this change, please contact us immediately.'
       };
 
-      /* when testing / development, don't send a confirmation email */
-      if (process.env.NODE_ENV === 'production') {
-        sgMail.send(emailData);
+      /* when testing, don't send a confirmation email */
+
+      if (process.env.NODE_ENV === 'test') {
         res.status(200).json({
           message: 'Your password has been changed successfully'
         });
       } else {
-        res.status(200).json({
-          message: 'Your password has been changed successfully'
-        });
+        try {
+          await sgMail.send(emailData);
+          res.status(200).json({
+            message: 'Your password has been changed successfully'
+          });
+        } catch (error) {
+          console.error(error.toString());
+
+          // Extract error msg
+          const { message, code, response } = error;
+
+          // Extract response msg
+          const { headers, body } = response;
+
+          res.status(500).json({
+            message,
+            code,
+            response,
+            headers,
+            body
+          });
+        }
       }
     }
   }
