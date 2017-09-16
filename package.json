@@ -5,7 +5,7 @@
   "author": "Christian Todd <christiantodd27@icloud.com>",
   "license": "MIT",
   "engines": {
-    "node": "8.2.1"
+    "node": "8.4.0"
   },
   "scripts": {
     "start": "node lib/index.js",
@@ -22,7 +22,7 @@
     "body-parser": "^1.17.2",
     "dotenv": "^4.0.0",
     "express": "^4.15.3",
-    "express-validator": "^3.2.1",
+    "express-validator": "^4.1.1",
     "helmet": "^3.8.0",
     "jsonwebtoken": "^7.4.1",
     "mongoose": "^4.11.4",

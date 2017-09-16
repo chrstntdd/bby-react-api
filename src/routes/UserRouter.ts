@@ -405,6 +405,9 @@ export default class UserRouter {
     res: Response,
     next?: NextFunction
   ): Promise<void> {
+    req.sanitizeParams('token').trim();
+    req.sanitizeParams('token').escape();
+
     const existingUser = await User.findOne({
       confirmationEmailToken: req.params.token
     });
@@ -434,14 +437,22 @@ export default class UserRouter {
     next?: NextFunction
   ): Promise<void> {
     /* Sanitize and validate input */
-    req.checkBody('email', 'Please enter a valid email address').isEmail();
-    req.checkBody('email', 'Please enter an email').notEmpty();
+    req
+      .checkBody('employeeNumber', 'Please enter your employee number')
+      .notEmpty();
+    req
+      .checkBody(
+        'employeeNumber',
+        'Your employee number should be in the format <LETTER><NUMBERiD>'
+      )
+      .isAlphanumeric();
 
-    req.sanitizeBody('email').escape();
-    req.sanitizeBody('email').trim();
+    req.sanitizeBody('employeeNumber').escape();
+    req.sanitizeBody('employeeNumber').trim();
 
     /* Assign valid and sanitized input to a variable for use */
-    const cleanEmail: string = req.body.email;
+    /* ACTUALLY COMING IN AS THE EMPLOYEE NUMBER */
+    const cleanEmployeeNumber: string = req.body.employeeNumber;
 
     /* Accumulate errors in result and return errors if so */
     const validationResult = await req.getValidationResult();
@@ -452,12 +463,15 @@ export default class UserRouter {
       res.status(400).json({ validationErrors });
     } else {
       /* get existing user */
-      const existingUser = await User.findOne({ email: cleanEmail });
+      const existingUser = await User.findOne({
+        employeeNumber: cleanEmployeeNumber
+      });
 
       if (!existingUser) {
-        res
-          .status(404)
-          .json({ error: "We can't find the user you're looking for" });
+        res.status(404).json({
+          error:
+            "We can't find an account associated with that employee number. Please try again."
+        });
       } else {
         /* set the token and expiration time */
         const resetPasswordToken = await genToken(24);
@@ -526,7 +540,7 @@ export default class UserRouter {
 
     if (!existingUser) {
       res.status(400).json({
-        message:
+        error:
           'Whoops! It looks like your reset token has already expired. Please try to reset your password again.'
       });
     } else {

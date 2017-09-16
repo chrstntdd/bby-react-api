@@ -23,10 +23,6 @@
     "@sendgrid/client" "^6.1.2"
     "@sendgrid/helpers" "^6.1.2"
 
-"@types/bluebird@^3.4.0":
-  version "3.5.8"
-  resolved "https://registry.yarnpkg.com/@types/bluebird/-/bluebird-3.5.8.tgz#242a83379f06c90f96acf6d1aeab3af6faebdb98"
-
 "@types/body-parser@^1.16.4":
   version "1.16.5"
   resolved "https://registry.yarnpkg.com/@types/body-parser/-/body-parser-1.16.5.tgz#d2b7daefab84e0afa9d3fae0935bc7355b6320af"
@@ -343,7 +339,7 @@ bluebird@2.10.2:
   version "2.10.2"
   resolved "https://registry.yarnpkg.com/bluebird/-/bluebird-2.10.2.tgz#024a5517295308857f14f91f1106fc3b555f446b"
 
-bluebird@^3.0.5, bluebird@^3.4.0, bluebird@^3.5.0:
+bluebird@^3.0.5, bluebird@^3.5.0:
   version "3.5.0"
   resolved "https://registry.yarnpkg.com/bluebird/-/bluebird-3.5.0.tgz#791420d7f551eea2897453a8a77653f96606d67c"
 
@@ -819,15 +815,13 @@ expect-ct@0.1.0:
   version "0.1.0"
   resolved "https://registry.yarnpkg.com/expect-ct/-/expect-ct-0.1.0.tgz#52735678de18530890d8d7b95f0ac63640958094"
 
-express-validator@^3.2.1:
-  version "3.2.1"
-  resolved "https://registry.yarnpkg.com/express-validator/-/express-validator-3.2.1.tgz#45603e7eee693185c2198fbdebd414925ffd3524"
+express-validator@^4.1.1:
+  version "4.1.1"
+  resolved "https://registry.yarnpkg.com/express-validator/-/express-validator-4.1.1.tgz#539d49262778eaac170fcd55ef6a3245196cb9d9"
   dependencies:
-    "@types/bluebird" "^3.4.0"
     "@types/express" "~4.0.34"
-    bluebird "^3.4.0"
     lodash "^4.16.0"
-    validator "~6.2.0"
+    validator "~8.1.0"
 
 express@^4.15.3:
   version "4.15.4"
@@ -2661,9 +2655,9 @@ v8flags@^3.0.0:
   dependencies:
     user-home "^1.1.1"
 
-validator@~6.2.0:
-  version "6.2.1"
-  resolved "https://registry.yarnpkg.com/validator/-/validator-6.2.1.tgz#bc575b78d15beb2e338a665ba9530c7f409ef667"
+validator@~8.1.0:
+  version "8.1.0"
+  resolved "https://registry.yarnpkg.com/validator/-/validator-8.1.0.tgz#89cf6b512ff71eba886afd8d10d47f8dc800eac0"
 
 vary@~1.1.1:
   version "1.1.1"

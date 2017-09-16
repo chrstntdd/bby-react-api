@@ -387,12 +387,12 @@ describe('The API', () => {
       let updatedUser;
       existingUser = await User.findOne();
 
-      const { _id, email, resetPasswordToken } = existingUser;
+      const { _id, employeeNumber, resetPasswordToken } = existingUser;
 
       res = await chai
         .request(app)
         .post('/api/v1/users/forgot-password')
-        .send({ email });
+        .send({ employeeNumber });
       res.should.exist;
       res.should.be.json;
       res.status.should.equal(200);
@@ -419,12 +419,12 @@ describe('The API', () => {
           validationMsg.validationErrors.should.have.length.of.at.least(1);
         });
     });
-    it('should return an error message if the email is invalid', () => {
-      const invalidEmail = 'iinvaL!d3ma!L';
+    it('should return an error message if the employeeNumber is invalid', () => {
+      const invalidEmployeeNumber = '.$*';
       return chai
         .request(app)
         .post('/api/v1/users/forgot-password')
-        .send({ email: invalidEmail })
+        .send({ employeeNumber: invalidEmployeeNumber })
         .then(res => {
           res.status.should.equal(400);
         })
@@ -435,14 +435,16 @@ describe('The API', () => {
           validationMsg.should.be.an('object');
           validationMsg.validationErrors.should.be.an('array');
           validationMsg.validationErrors.should.have.length.of.at.least(1);
-          validationMsg.validationErrors[0].value.should.equal(invalidEmail);
+          validationMsg.validationErrors[0].value.should.equal(
+            invalidEmployeeNumber
+          );
         });
     });
     it("should return an error message if the user can't be found with the supplied email", () => {
       return chai
         .request(app)
         .post('/api/v1/users/forgot-password')
-        .send({ email: 'a1075394@bestbuy.com' })
+        .send({ employeeNumber: 'a1075394' })
         .then(res => {
           res.should.exist;
           res.status.should.equal(404);
@@ -463,13 +465,13 @@ describe('The API', () => {
       let existingUser;
 
       existingUser = await User.findOne();
-      const { email } = existingUser;
+      const { employeeNumber } = existingUser;
 
       /* make request to reset password */
       const forgotPasswordRes = await chai
         .request(app)
         .post('/api/v1/users/forgot-password')
-        .send({ email });
+        .send({ employeeNumber });
 
       /* forgot password should succeed */
       forgotPasswordRes.should.exist;
@@ -488,11 +490,11 @@ describe('The API', () => {
     });
     it("should return an error if the token doesn't match an existing user", () => {
       return User.findOne().then(userObject => {
-        const { email } = userObject;
+        const { employeeNumber } = userObject;
         return chai
           .request(app)
           .post('/api/v1/users/forgot-password')
-          .send({ email })
+          .send({ employeeNumber })
           .then(res => {
             res.should.exist;
             res.should.be.json;
@@ -513,7 +515,7 @@ describe('The API', () => {
                 err.should.exist;
                 err.status.should.equal(400);
                 const errorMsg = JSON.parse(err.response.error.text);
-                errorMsg.message.should.be.a('string');
+                errorMsg.error.should.be.a('string');
               });
           });
       });
@@ -616,7 +618,7 @@ describe('POST /api/v1/users/sign-in - allow user to authenticate and receive JW
   afterEach(() => tearDownDb());
   after(() => closeServer());
 
-  it('should allow a user to sign in and issue a valid JWT', () => {
+  it('should allow a user to sign in and issue a valid JWT', async () => {
     /* We forgo the normal .insertMany() call here in favor of .create() 
      * .insertMany() wont let us .save() and generate the hashed password 
      * required for login. So we generate a random user, grab their auth 
@@ -628,28 +630,24 @@ describe('POST /api/v1/users/sign-in - allow user to authenticate and receive JW
     const user = generateUser();
     /* raw email and password. */
     const { email, password } = user;
-    User.create(user).then(() => {
-      return User.findOne({ email }).then(userObject => {
-        userObject.isVerified = true;
-        userObject.save();
-        /* raw password and hashed/salted password */
-        const { email, password } = userObject;
-        const requestBody = {
-          email,
-          password
-        };
-        return chai
-          .request(app)
-          .post('/api/v1/users/sign-in')
-          .send(requestBody)
-          .then(res => {
-            res.should.exist;
-            res.should.be.json;
-            res.status.should.equal(200);
-            res.body.should.contain.keys('token', 'user');
-          });
-      });
-    });
+
+    await User.create(user);
+    const userObject = await User.findOne({ email });
+    userObject.isVerified = true;
+    await userObject.save();
+    const requestBody = {
+      email,
+      password
+    };
+    const res = await chai
+      .request(app)
+      .post('/api/v1/users/sign-in')
+      .send(requestBody);
+
+    res.should.exist;
+    res.should.be.json;
+    res.status.should.equal(200);
+    res.body.should.contain.keys('token', 'user');
   });
   it('passport should return a 400 if email is empty', () => {
     return chai
