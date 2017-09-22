@@ -4,6 +4,8 @@ import { sign } from 'jsonwebtoken';
 
 import User = require('../models/user');
 
+const upperFirst = require('lodash.upperfirst');
+
 require('dotenv').config();
 
 /* Constants */
@@ -232,14 +234,11 @@ export default class UserRouter {
     req.sanitizeBody('storeNumber').toInt(10);
 
     /* Assign validated and sanitized inputs to variables for later use */
-    const {
-      firstName,
-      lastName,
-      password,
-      employeeNumber,
-      storeNumber
-    } = req.body;
+    const { password, employeeNumber, storeNumber } = req.body;
     const email = `${employeeNumber}@bestbuy.com`;
+
+    const firstName = upperFirst(req.body.firstName);
+    const lastName = upperFirst(req.body.lastName);
 
     /* Accumulate errors in result and return error if so */
     const validationResult = await req.getValidationResult();
