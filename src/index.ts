@@ -1,7 +1,6 @@
 import Api from './Api';
 
 require('dotenv').config();
-require('dotenv').load();
 
 const mongoose = require('mongoose');
 
