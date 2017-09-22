@@ -277,7 +277,7 @@ export default class UserRouter {
         text:
           'You are receiving this because you (or someone else) have requested an account with Quantified.\n\n' +
           'Please click on the following link, or paste this into your browser to complete the process:\n\n' +
-          `${CLIENT_URL}/verify-email/${newUser.confirmationEmailToken}\n\n` +
+          `${CLIENT_URL}/verify-email?token=${newUser.confirmationEmailToken}\n\n` +
           `If you did not request this, please ignore this email.\n`
       };
       /* don't send a confirmation email when testing, but return the same result */
@@ -402,11 +402,11 @@ export default class UserRouter {
     res: Response,
     next?: NextFunction
   ): Promise<void> {
-    req.sanitizeParams('token').trim();
-    req.sanitizeParams('token').escape();
+    req.sanitizeQuery('token').trim();
+    req.sanitizeQuery('token').escape();
 
     const existingUser = await User.findOne({
-      confirmationEmailToken: req.params.token
+      confirmationEmailToken: req.query.token
     });
 
     if (!existingUser) {
@@ -655,7 +655,7 @@ export default class UserRouter {
     );
     this.router.post('/', asyncMiddleware(this.createNew));
     this.router.post('/sign-in', asyncMiddleware(this.signIn));
-    this.router.post('/verify-email/:token', asyncMiddleware(this.verifyEmail));
+    this.router.post('/verify-email', asyncMiddleware(this.verifyEmail));
     this.router.post('/forgot-password', asyncMiddleware(this.forgotPassword));
     this.router.post(
       '/reset-password/:token',
