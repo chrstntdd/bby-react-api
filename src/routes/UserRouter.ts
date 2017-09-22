@@ -1,12 +1,10 @@
-require('dotenv').config();
-import { ValidationSchema } from 'express-validator';
-import { Router, Request, Response, NextFunction } from 'express';
-import User = require('../models/user');
-import { sign } from 'jsonwebtoken';
 import { randomBytes } from 'crypto';
+import { NextFunction, Request, Response, Router } from 'express';
+import { sign } from 'jsonwebtoken';
 
-/* Interfaces */
-import { MappedError, IUser } from '../interfaces/index';
+import User = require('../models/user');
+
+require('dotenv').config();
 
 /* Constants */
 const JWT_SECRET = process.env.JWT_SECRET;
@@ -280,7 +278,7 @@ export default class UserRouter {
         text:
           'You are receiving this because you (or someone else) have requested an account with Quantified.\n\n' +
           'Please click on the following link, or paste this into your browser to complete the process:\n\n' +
-          `${CLIENT_URL}/confirm-email/${newUser.confirmationEmailToken}\n\n` +
+          `${CLIENT_URL}/verify-email/${newUser.confirmationEmailToken}\n\n` +
           `If you did not request this, please ignore this email.\n`
       };
       /* don't send a confirmation email when testing, but return the same result */
