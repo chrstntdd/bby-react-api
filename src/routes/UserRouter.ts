@@ -415,8 +415,9 @@ export default class UserRouter {
         message: 'Account not found'
       });
     } else {
-      /* if a user is found, flip the verified flag, save the document, and set auth headers */
+      /* if a user is found, flip the verified flag, clear the token, save the document, and set auth headers */
       existingUser.isVerified = true;
+      existingUser.confirmationEmailToken = undefined;
 
       const updatedUser = await existingUser.save();
       const userInfo = setUserInfo(updatedUser);
