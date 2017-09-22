@@ -1,6 +1,9 @@
-require('dotenv').config();
+import { generateNewUser, generateTable, generateUser } from '../generateTestData.js';
 import Api from '../src/Api';
+import { closeServer, runServer } from '../src/index';
+import User = require('../src/models/user');
 
+require('dotenv').config();
 const app = new Api().express;
 
 const chai = require('chai');
@@ -17,13 +20,6 @@ chai.use(chaiHttp);
 mongoose.Promise = global.Promise;
 process.env.NODE_ENV = 'test';
 
-import {
-  generateNewUser,
-  generateTable,
-  generateUser
-} from '../generateTestData.js';
-import { runServer, closeServer } from '../src/index';
-import User = require('../src/models/user');
 const TEST_DATABASE_URL = process.env.TEST_DATABASE_URL;
 
 const seedUsers = async testData => {
@@ -70,29 +66,38 @@ describe('The API', () => {
   /* Get all users */
   describe('GET /api/v1/users - get all users', () => {
     it('should return a JSON array', () => {
-      return chai.request(app).get('/api/v1/users').then(res => {
-        res.status.should.equal(200);
-        res.should.be.json;
-        res.body.should.be.an('array');
-      });
+      return chai
+        .request(app)
+        .get('/api/v1/users')
+        .then(res => {
+          res.status.should.equal(200);
+          res.should.be.json;
+          res.body.should.be.an('array');
+        });
     });
     it('should return user objects with the correct props', () => {
-      return chai.request(app).get('/api/v1/users').then(res => {
-        const user = res.body[1];
-        const userKeys = Object.keys(user);
-        expectedProps.forEach(key => {
-          userKeys.should.include(key);
+      return chai
+        .request(app)
+        .get('/api/v1/users')
+        .then(res => {
+          const user = res.body[1];
+          const userKeys = Object.keys(user);
+          expectedProps.forEach(key => {
+            userKeys.should.include(key);
+          });
         });
-      });
     });
     it("shouldn't return a user object with extra props", () => {
-      return chai.request(app).get('/api/v1/users').then(res => {
-        const user = res.body[0];
-        const extraProps = Object.keys(user).filter(key => {
-          return !expectedProps.includes(key);
+      return chai
+        .request(app)
+        .get('/api/v1/users')
+        .then(res => {
+          const user = res.body[0];
+          const extraProps = Object.keys(user).filter(key => {
+            return !expectedProps.includes(key);
+          });
+          extraProps.length.should.equal(0);
         });
-        extraProps.length.should.equal(0);
-      });
     });
   });
   /* Get user by id */
@@ -101,12 +106,15 @@ describe('The API', () => {
       let userId;
       return User.findOne().then(userObject => {
         userId = userObject._id;
-        return chai.request(app).get(`/api/v1/users/${userId}`).then(res => {
-          res.status.should.equal(200);
-          res.should.be.json;
-          res.body.should.be.an('object');
-          res.body.should.include.keys(expectedProps);
-        });
+        return chai
+          .request(app)
+          .get(`/api/v1/users/${userId}`)
+          .then(res => {
+            res.status.should.equal(200);
+            res.should.be.json;
+            res.body.should.be.an('object');
+            res.body.should.include.keys(expectedProps);
+          });
       });
     });
     it('should 400 for a request containing a nonexistent id', async () => {
@@ -139,15 +147,18 @@ describe('The API', () => {
     it('should create a new user when all the required fields are submitted', async () => {
       const newUser = generateNewUser();
       let res;
-      res = await chai.request(app).post('/api/v1/users').send({
-        email: newUser.email,
-        password: newUser.password,
-        confirmPassword: newUser.password,
-        firstName: newUser.firstName,
-        lastName: newUser.lastName,
-        employeeNumber: newUser.employeeNumber,
-        storeNumber: newUser.storeNumber
-      });
+      res = await chai
+        .request(app)
+        .post('/api/v1/users')
+        .send({
+          email: newUser.email,
+          password: newUser.password,
+          confirmPassword: newUser.password,
+          firstName: newUser.firstName,
+          lastName: newUser.lastName,
+          employeeNumber: newUser.employeeNumber,
+          storeNumber: newUser.storeNumber
+        });
       res.should.exist;
       res.should.be.json;
       res.status.should.equal(201);

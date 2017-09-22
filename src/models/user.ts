@@ -1,7 +1,8 @@
+import { compare, genSalt, hash } from 'bcrypt-nodejs';
 import * as mongoose from 'mongoose';
-import { compare, hash, genSalt } from 'bcrypt-nodejs';
-import { ProductSchema } from './product';
+
 import { IUser } from '../interfaces';
+import { ProductSchema } from './product';
 
 interface IUserModel extends IUser, mongoose.Document {}
 

@@ -1,6 +1,9 @@
-require('dotenv').config();
+import { generateUser } from '../generateTestData.js';
 import Api from '../src/Api';
+import { closeServer, runServer } from '../src/index';
+import User = require('../src/models/user');
 
+require('dotenv').config();
 const app = new Api().express;
 
 const chai = require('chai');
@@ -12,11 +15,7 @@ const faker = require('faker');
 chai.use(chaiHttp);
 process.env.NODE_ENV = 'test';
 
-import { runServer, closeServer } from '../src/index';
-import User = require('../src/models/user');
 const TEST_DATABASE_URL = process.env.TEST_DATABASE_URL;
-import { generateUser } from '../generateTestData.js';
-
 const upc: string = faker.random
   .number({
     min: 100000000000,

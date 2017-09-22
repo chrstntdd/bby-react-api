@@ -1,14 +1,14 @@
-import * as express from 'express';
-import * as morgan from 'morgan';
 import * as bodyParser from 'body-parser';
+import * as express from 'express';
+import * as expressValidator from 'express-validator';
 import * as helmet from 'helmet';
+import * as morgan from 'morgan';
 import * as passport from 'passport';
-import expressValidator = require('express-validator');
+
+import BestBuyRouter from './routes/BestBuyRouter';
+import UserRouter from './routes/UserRouter';
 
 /* import all routers */
-import UserRouter from './routes/UserRouter';
-import BestBuyRouter from './routes/BestBuyRouter';
-
 export default class Api {
   /* reference to the express instance */
   public express: express.Application;
