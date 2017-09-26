@@ -19,8 +19,7 @@
       "chai",
       "express",
       "express-validator",
-      "chai-http",
-      "nodemailer"
+      "chai-http"
     ],
     "typeRoots": ["./node_modules/@types"]
   },
