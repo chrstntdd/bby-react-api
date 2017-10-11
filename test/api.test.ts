@@ -370,7 +370,7 @@ describe('The API', () => {
             res.should.exist;
             res.should.be.json;
             res.status.should.equal(200);
-            res.body.should.contain.keys('token', 'user');
+            res.body.should.contain.keys('jwt', 'user');
             res.body.user.isVerified.should.equal(true);
           });
       });
@@ -471,7 +471,7 @@ describe('The API', () => {
   });
 
   /* Reset password handler */
-  describe('POST /api/v1/users/reset-password/:token - handle setting new password and resetting reset tokens', () => {
+  describe('POST /api/v1/users/reset-password - handle setting new password and resetting reset tokens', () => {
     it('should allow existing users to reset their password', async () => {
       let existingUser;
 
@@ -492,7 +492,7 @@ describe('The API', () => {
 
       const resetPasswordRes = await chai
         .request(app)
-        .post(`/api/v1/users/reset-password/${resetToken}`)
+        .post(`/api/v1/users/reset-password?token=${resetToken}`)
         .send({ password: 'superSecretPassword' });
 
       resetPasswordRes.should.exist;
@@ -516,7 +516,7 @@ describe('The API', () => {
           .then(userResetToken => {
             return chai
               .request(app)
-              .post(`/api/v1/users/reset-password/${userResetToken}`)
+              .post(`/api/v1/users/reset-password?token=${userResetToken}`)
               .send({ password: 'altSecretPassword' })
               .then(res => {
                 res.should.exist;
@@ -559,7 +559,7 @@ describe('Manipulating/viewing persisted table data', () => {
       .request(app)
       .post('/api/v1/users/sign-in')
       .send(requestBody);
-    signedInUserJWT = signInResponse.body.token;
+    signedInUserJWT = signInResponse.body.jwt;
   });
   afterEach(() => tearDownDb());
   after(() => closeServer());
@@ -658,7 +658,7 @@ describe('POST /api/v1/users/sign-in - allow user to authenticate and receive JW
     res.should.exist;
     res.should.be.json;
     res.status.should.equal(200);
-    res.body.should.contain.keys('token', 'user');
+    res.body.should.contain.keys('jwt', 'user');
   });
   it('passport should return a 400 if email is empty', () => {
     return chai

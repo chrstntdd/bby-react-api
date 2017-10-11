@@ -165,7 +165,7 @@ export default class UserRouter {
        */
       const userInfo = setUserInfo(existingUser);
       return res.status(200).json({
-        token: `JWT ${generateJWT(userInfo)}`,
+        jwt: `JWT ${generateJWT(userInfo)}`,
         user: userInfo
       });
     });
@@ -424,7 +424,7 @@ export default class UserRouter {
       const updatedUser = await existingUser.save();
       const userInfo = setUserInfo(updatedUser);
       res.status(200).json({
-        token: `JWT ${generateJWT(userInfo)}`,
+        jwt: `JWT ${generateJWT(userInfo)}`,
         user: userInfo
       });
     }
@@ -534,7 +534,7 @@ export default class UserRouter {
     next?: NextFunction
   ): Promise<void> {
     const existingUser = await User.findOne({
-      resetPasswordToken: req.params.token,
+      resetPasswordToken: req.query.token,
       resetPasswordExpires: { $gt: Date.now() }
     });
 
@@ -659,10 +659,7 @@ export default class UserRouter {
     this.router.post('/sign-in', asyncMiddleware(this.signIn));
     this.router.post('/verify-email', asyncMiddleware(this.verifyEmail));
     this.router.post('/forgot-password', asyncMiddleware(this.forgotPassword));
-    this.router.post(
-      '/reset-password/:token',
-      asyncMiddleware(this.resetPassword)
-    );
+    this.router.post('/reset-password', asyncMiddleware(this.resetPassword));
     this.router.put('/:id', asyncMiddleware(this.updateById));
     this.router.delete('/:id', asyncMiddleware(this.deleteById));
   }

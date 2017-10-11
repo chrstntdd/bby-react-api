@@ -53,7 +53,7 @@ describe('The Best Buy API', () => {
       .post('/api/v1/users/sign-in')
       .send(requestBody);
     /* retrieve a valid JWT for authorized requests */
-    signedInUserJWT = signInResponse.body.token;
+    signedInUserJWT = signInResponse.body.jwt;
   });
   afterEach(() => tearDownDb());
   after(() => closeServer());

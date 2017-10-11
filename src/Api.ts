@@ -4,6 +4,7 @@ import * as expressValidator from 'express-validator';
 import * as helmet from 'helmet';
 import * as morgan from 'morgan';
 import * as passport from 'passport';
+import * as compression from 'compression';
 
 import BestBuyRouter from './routes/BestBuyRouter';
 import UserRouter from './routes/UserRouter';
@@ -43,6 +44,7 @@ export default class Api {
       res.header('Access-Control-Allow-Credentials', 'true');
       next();
     });
+    this.express.use(compression());
     this.express.use(helmet());
     this.express.use(morgan('dev'));
     this.express.use(bodyParser.json());

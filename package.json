@@ -20,6 +20,7 @@
     "bcrypt-nodejs": "^0.0.3",
     "bestbuy": "^1.1.0",
     "body-parser": "^1.17.2",
+    "compression": "^1.7.1",
     "dotenv": "^4.0.0",
     "express": "^4.15.3",
     "express-validator": "^4.1.1",
