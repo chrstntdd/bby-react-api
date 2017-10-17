@@ -1,6 +1,7 @@
 import { randomBytes } from 'crypto';
 import { NextFunction, Request, Response, Router } from 'express';
 import { sign } from 'jsonwebtoken';
+import * as nodemailer from 'nodemailer';
 
 import User = require('../models/user');
 
@@ -12,10 +13,26 @@ require('dotenv').config();
 /* Constants */
 const JWT_SECRET = process.env.JWT_SECRET;
 const CLIENT_URL = process.env.CLIENT_URL;
+const EMAIL_USER = process.env.EMAIL_USER;
+const EMAIL_PASS = process.env.EMAIL_PASS;
 
 /* EMAIL CONFIG */
-const sgMail = require('@sendgrid/mail');
-sgMail.setApiKey(process.env.SENDGRID_API_KEY);
+const transporter = nodemailer.createTransport({
+  host: 'smtp.gmail.com',
+  port: 465,
+  secure: true,
+  auth: {
+    user: EMAIL_USER,
+    pass: EMAIL_PASS
+  }
+});
+
+const sendEmailAsync = emailData =>
+  new Promise((resolve, reject) => {
+    transporter.sendMail(emailData, err => {
+      err ? reject(err) : resolve(emailData);
+    });
+  });
 
 /* Passport middleware */
 const passport = require('passport');
@@ -25,13 +42,13 @@ const requireAuth = passport.authenticate('jwt', { session: false });
 /* Utility functions */
 const generateJWT = user => sign(user, JWT_SECRET, { expiresIn: '2h' });
 
-const setUserInfo = user => ({
-  id: user._id,
-  email: user.email,
-  firstName: user.profile.firstName,
-  lastName: user.profile.lastName,
-  role: user.role,
-  isVerified: user.isVerified
+const setUserInfo = ({ _id, email, profile, role, isVerified }) => ({
+  email,
+  role,
+  isVerified,
+  id: _id,
+  firstName: profile.firstName,
+  lastName: profile.lastName
 });
 
 /* In our use case the function it will take is an express route handler,
@@ -290,7 +307,7 @@ export default class UserRouter {
         });
       } else {
         try {
-          await sgMail.send(emailData);
+          await sendEmailAsync(emailData);
           res.status(201).json({
             message:
               'Thank you for signing up! Your account has been created, now please check your work email to confirm your account.'
@@ -499,7 +516,7 @@ export default class UserRouter {
           });
         } else {
           try {
-            await sgMail.send(emailData);
+            await sendEmailAsync(emailData);
             res.status(200).json({
               resetToken: resetPasswordToken,
               message:
@@ -576,7 +593,7 @@ export default class UserRouter {
         });
       } else {
         try {
-          await sgMail.send(emailData);
+          await sendEmailAsync(emailData);
           res.status(200).json({
             message: 'Your password has been changed successfully'
           });

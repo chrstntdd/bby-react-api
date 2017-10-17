@@ -15,6 +15,7 @@
       "mongoose",
       "passport",
       "node",
+      "nodemailer",
       "mocha",
       "chai",
       "express",
