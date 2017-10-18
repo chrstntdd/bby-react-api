@@ -17,15 +17,33 @@ const CLIENT_URL = process.env.CLIENT_URL;
 const EMAIL_USER = process.env.EMAIL_USER;
 const EMAIL_PASS = process.env.EMAIL_PASS;
 const SMTP_URL = process.env.SMTP_URL;
-
+process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
 /* EMAIL CONFIG */
-const transporter = nodemailer.createTransport(SMTP_URL);
+const transporter = nodemailer.createTransport(
+  smtpTransport({
+    service: 'gmail',
+    tls: {
+      rejectUnauthorized: false
+    },
+    auth: {
+      user: EMAIL_USER,
+      pass: EMAIL_PASS
+    }
+  })
+);
 
 const sendEmailAsync = emailData =>
   new Promise((resolve, reject) => {
     transporter.sendMail(emailData, err => {
       err ? reject(err) : resolve(emailData);
     });
+  });
+
+const verifySMTP = () =>
+  new Promise((resolve, reject) => {
+    transporter.verify(
+      (error, success) => (error ? reject(error) : resolve(success))
+    );
   });
 
 /* Passport middleware */
@@ -301,6 +319,7 @@ export default class UserRouter {
         });
       } else {
         try {
+          await verifySMTP();
           await sendEmailAsync(emailData);
           res.status(201).json({
             message:
@@ -510,6 +529,7 @@ export default class UserRouter {
           });
         } else {
           try {
+            await verifySMTP();
             await sendEmailAsync(emailData);
             res.status(200).json({
               resetToken: resetPasswordToken,
@@ -587,6 +607,7 @@ export default class UserRouter {
         });
       } else {
         try {
+          await verifySMTP();
           await sendEmailAsync(emailData);
           res.status(200).json({
             message: 'Your password has been changed successfully'
