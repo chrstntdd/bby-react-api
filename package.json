@@ -11,11 +11,9 @@
     "start": "node lib/index.js",
     "watch": "nodemon lib/index.js",
     "build": "tsc src/ -d lib/",
-    "build-win":
-      "node_modules/.bin/tsc -p t:/Development/projects/bby-react-api/tsconfig.json",
+    "build-win": "node_modules/.bin/tsc -p t:/Development/projects/bby-react-api/tsconfig.json",
     "genData": "node -e 'require(\"./generateTestData.js\").writeFileToDisk()'",
-    "test":
-      "mocha -c --reporter spec --compilers ts:ts-node/register --timeout 20000 "
+    "test": "mocha -c --reporter spec --compilers ts:ts-node/register --timeout 20000 "
   },
   "dependencies": {
     "bcrypt-nodejs": "^0.0.3",
@@ -32,6 +30,7 @@
     "mongoose": "^4.11.4",
     "morgan": "^1.8.2",
     "nodemailer": "^4.2.0",
+    "nodemailer-smtp-transport": "^2.7.4",
     "passport": "^0.3.2",
     "passport-jwt": "^2.2.1"
   },

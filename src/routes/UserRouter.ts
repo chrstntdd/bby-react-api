@@ -2,6 +2,7 @@ import { randomBytes } from 'crypto';
 import { NextFunction, Request, Response, Router } from 'express';
 import { sign } from 'jsonwebtoken';
 import * as nodemailer from 'nodemailer';
+import * as smtpTransport from 'nodemailer-smtp-transport';
 
 import User = require('../models/user');
 
@@ -13,12 +14,20 @@ require('dotenv').config();
 /* Constants */
 const JWT_SECRET = process.env.JWT_SECRET;
 const CLIENT_URL = process.env.CLIENT_URL;
-// const EMAIL_USER = process.env.EMAIL_USER;
-// const EMAIL_PASS = process.env.EMAIL_PASS;
+const EMAIL_USER = process.env.EMAIL_USER;
+const EMAIL_PASS = process.env.EMAIL_PASS;
 const SMTP_URL = process.env.SMTP_URL;
 
 /* EMAIL CONFIG */
-const transporter = nodemailer.createTransport(SMTP_URL);
+const transporter = nodemailer.createTransport(
+  smtpTransport({
+    service: 'gmail',
+    auth: {
+      user: EMAIL_USER,
+      pass: EMAIL_PASS
+    }
+  })
+);
 
 const sendEmailAsync = emailData =>
   new Promise((resolve, reject) => {
