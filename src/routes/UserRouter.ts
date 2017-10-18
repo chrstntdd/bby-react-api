@@ -19,15 +19,7 @@ const EMAIL_PASS = process.env.EMAIL_PASS;
 const SMTP_URL = process.env.SMTP_URL;
 
 /* EMAIL CONFIG */
-const transporter = nodemailer.createTransport(
-  smtpTransport({
-    service: 'gmail',
-    auth: {
-      user: EMAIL_USER,
-      pass: EMAIL_PASS
-    }
-  })
-);
+const transporter = nodemailer.createTransport(SMTP_URL);
 
 const sendEmailAsync = emailData =>
   new Promise((resolve, reject) => {
