@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "main": "index.js",
   "author": "Christian Todd <christiantodd27@icloud.com>",
-  "license": "MIT",
+  "license": "GNU GPLv3",
   "engines": {
     "node": "8.6.0"
   },
