@@ -6,10 +6,10 @@ import * as morgan from 'morgan';
 import * as passport from 'passport';
 import * as compression from 'compression';
 
+/* import all routers */
 import BestBuyRouter from './routes/BestBuyRouter';
 import UserRouter from './routes/UserRouter';
 
-/* import all routers */
 export default class Api {
   /* reference to the express instance */
   public express: express.Application;
