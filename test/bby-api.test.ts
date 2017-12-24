@@ -1,10 +1,8 @@
 import { generateUser } from '../generateTestData.js';
-import Api from '../src/Api';
-import { closeServer, runServer } from '../src/index';
+import { app, closeServer, runServer } from '../src/index';
 import User = require('../src/models/user');
 
 require('dotenv').config();
-const app = new Api().express;
 
 const chai = require('chai');
 const chaiHttp = require('chai-http');

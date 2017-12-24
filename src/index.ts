@@ -1,11 +1,21 @@
-import Api from './Api';
-require('dotenv').config();
-const mongoose = require('mongoose');
-/* Set mongoose promise to native ES6 promise */
-mongoose.Promise = global.Promise;
+import * as bodyParser from 'body-parser';
+import * as express from 'express';
+import * as expressValidator from 'express-validator';
+import * as helmet from 'helmet';
+import * as morgan from 'morgan';
+import * as passport from 'passport';
+import * as compression from 'compression';
+import * as mongoose from 'mongoose';
 
-/* Instantiate our app instance */
-const app = new Api();
+/* import all routers */
+import BestBuyRouter from './routes/BestBuyRouter';
+import UserRouter from './routes/UserRouter';
+
+require('dotenv').config();
+const app = express();
+
+/* Set mongoose promise to native ES6 promise */
+(<any>mongoose).Promise = Promise;
 
 const connectOptions = {
   useMongoClient: true,
@@ -14,7 +24,7 @@ const connectOptions = {
 };
 
 /* Get current environment */
-export const ENV = app.currentEnv();
+export const ENV = app.get('env');
 
 let DATABASE_URL;
 let PORT;
@@ -28,16 +38,50 @@ if (ENV === 'production') {
   PORT = 3000;
 }
 
+/* MIDDLEWARE */
+app.use((req, res, next) => {
+  /* Don't allow caching. Needed for IE support :/ */
+  res.header('Cache-Control', 'no-cache, no-store, must-revalidate');
+  res.header('Pragma', 'no-cache');
+  res.header('Access-Control-Allow-Origin', '*');
+  res.header('Access-Control-Allow-Methods', 'PUT, GET, POST, DELETE, OPTIONS');
+  res.header(
+    'Access-Control-Allow-Headers',
+    'Origin, X-Requested-With, Content-Type, Accept, Authorization, Access-Control-Allow-Credentials'
+  );
+  res.header('Access-Control-Allow-Credentials', 'true');
+  next();
+});
+app.use(compression());
+app.use(helmet());
+app.use(morgan('dev'));
+app.use(bodyParser.json());
+app.use(bodyParser.urlencoded({ extended: false }));
+app.use(passport.initialize());
+app.use(expressValidator());
+app.use((err, req, res, next) => {
+  console.error(err);
+  res.status(err.status || 500).json({
+    message: err.message,
+    error: err
+  });
+});
+
+/* create an instance of the each of our routers */
+const userRouter = new UserRouter();
+const bestBuyRouter = new BestBuyRouter();
+
+/* attach all routers to our express app */
+app.use(userRouter.path, userRouter.router);
+app.use(bestBuyRouter.path, bestBuyRouter.router);
+
 let server;
 
-export const runServer = async (
-  dbURL: string = DATABASE_URL,
-  port: number = PORT
-) => {
+const runServer = async (dbURL: string = DATABASE_URL, port: number = PORT) => {
   try {
     await mongoose.connect(dbURL, connectOptions);
     await new Promise((resolve, reject) => {
-      server = app.express
+      server = app
         .listen(port, () => {
           console.info(`The ${ENV} server is listening on port ${port} 🤔`);
           resolve();
@@ -52,7 +96,7 @@ export const runServer = async (
   }
 };
 
-export const closeServer = async () => {
+const closeServer = async () => {
   try {
     await mongoose.disconnect();
     await new Promise((resolve, reject) => {
@@ -65,3 +109,5 @@ export const closeServer = async () => {
 };
 
 require.main === module && runServer().catch(err => console.error(err));
+
+export { runServer, closeServer, app };
