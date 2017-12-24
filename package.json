@@ -5,7 +5,7 @@
   "author": "Christian Todd <christiantodd27@icloud.com>",
   "license": "GPL-3.0",
   "engines": {
-    "node": "8.9.1"
+    "node": "8.9.3"
   },
   "scripts": {
     "start": "node lib/index.js",
