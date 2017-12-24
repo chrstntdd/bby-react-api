@@ -1,29 +1,11 @@
 import Api from './Api';
-
 require('dotenv').config();
-
 const mongoose = require('mongoose');
-
-/* Instantiate our app instance */
-const app: Api = new Api();
-
-/* Get current environment */
-const env = app.currentEnv();
-
-let DATABASE_URL;
-let PORT;
-
-/* set environment variables */
-if (env === 'production') {
-  DATABASE_URL = process.env.MONGODB_URI;
-  PORT = process.env.PORT;
-} else {
-  DATABASE_URL = process.env.TEST_DATABASE_URL;
-  PORT = 3000;
-}
-
 /* Set mongoose promise to native ES6 promise */
 mongoose.Promise = global.Promise;
+
+/* Instantiate our app instance */
+const app = new Api();
 
 const connectOptions = {
   useMongoClient: true,
@@ -31,23 +13,33 @@ const connectOptions = {
   reconnectTries: Number.MAX_VALUE
 };
 
-/* Both runServer and closeServer need access to the server var,
- * so it's declared outside of both function.
- */
+/* Get current environment */
+export const ENV = app.currentEnv();
+
+let DATABASE_URL;
+let PORT;
+
+/* set environment variables */
+if (ENV === 'production') {
+  DATABASE_URL = process.env.MONGODB_URI;
+  PORT = parseInt(process.env.PORT, 10);
+} else {
+  DATABASE_URL = process.env.TEST_DATABASE_URL;
+  PORT = 3000;
+}
+
 let server;
 
 export const runServer = async (
-  databaseUrl: string = DATABASE_URL,
-  port: number | string = PORT
+  dbURL: string = DATABASE_URL,
+  port: number = PORT
 ) => {
   try {
-    await mongoose.connect(databaseUrl, connectOptions);
+    await mongoose.connect(dbURL, connectOptions);
     await new Promise((resolve, reject) => {
       server = app.express
         .listen(port, () => {
-          console.info(
-            `Your server is listening on port ${port} with the db ${databaseUrl} in a ${env} environment🤔`
-          );
+          console.info(`The ${ENV} server is listening on port ${port} 🤔`);
           resolve();
         })
         .on('error', err => {
@@ -65,16 +57,11 @@ export const closeServer = async () => {
     await mongoose.disconnect();
     await new Promise((resolve, reject) => {
       console.info(`Closing server. Goodbye old friend.`);
-      server.close(err => {
-        if (err) return reject(err);
-        return resolve();
-      });
+      server.close(err => (err ? reject(err) : resolve()));
     });
   } catch (err) {
-    console.error('error');
+    console.error(err);
   }
 };
 
-if (require.main === module) {
-  runServer().catch(err => console.error(err));
-}
+require.main === module && runServer().catch(err => console.error(err));

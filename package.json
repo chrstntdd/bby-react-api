@@ -11,9 +11,11 @@
     "start": "node lib/index.js",
     "watch": "nodemon lib/index.js",
     "build": "tsc src/ -d lib/",
-    "build-win": "node_modules/.bin/tsc -p t:/Development/projects/bby-react-api/tsconfig.json",
+    "build-win":
+      "node_modules/.bin/tsc -p t:/Development/projects/bby-react-api/tsconfig.json",
     "genData": "node -e 'require(\"./generateTestData.js\").writeFileToDisk()'",
-    "test": "mocha -c --reporter spec --compilers ts:ts-node/register --timeout 20000 "
+    "test":
+      "mocha -c --reporter spec --compilers ts:ts-node/register ./test/*.test.ts --timeout 20000 "
   },
   "dependencies": {
     "bcrypt-nodejs": "^0.0.3",

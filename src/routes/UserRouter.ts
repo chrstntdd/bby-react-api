@@ -1,6 +1,7 @@
 import { randomBytes } from 'crypto';
 import { NextFunction, Request, Response, Router } from 'express';
 import { sign } from 'jsonwebtoken';
+import { ENV } from '../index';
 import * as nodemailer from 'nodemailer';
 import * as smtpTransport from 'nodemailer-smtp-transport';
 
@@ -12,8 +13,11 @@ const lowerFirst = require('lodash.lowerfirst');
 require('dotenv').config();
 
 /* Constants */
+let CLIENT_URL;
+ENV !== 'production'
+  ? (CLIENT_URL = 'http://localhost:4444')
+  : (CLIENT_URL = process.env.CLIENT_URL);
 const JWT_SECRET = process.env.JWT_SECRET;
-const CLIENT_URL = process.env.CLIENT_URL;
 const EMAIL_USER = process.env.EMAIL_USER;
 const EMAIL_PASS = process.env.EMAIL_PASS;
 const SMTP_URL = process.env.SMTP_URL;
@@ -312,7 +316,7 @@ export default class UserRouter {
           `If you did not request this, please ignore this email.\n`
       };
       /* don't send a confirmation email when testing, but return the same result */
-      if (process.env.NODE_ENV === 'test') {
+      if (ENV === 'test') {
         res.status(201).json({
           message:
             'Your account has been created, now please check your work email to confirm your account.'
@@ -517,11 +521,11 @@ export default class UserRouter {
           text:
             'You are receiving this because you (or someone else) have requested the reset of the password for your account.\n\n' +
             'Please click on the following link, or paste this into your browser to complete the process:\n\n' +
-            `${CLIENT_URL}/reset-password/${resetPasswordToken}\n\n` +
+            `${CLIENT_URL}/reset-password?token=${resetPasswordToken}\n\n` +
             `If you did not request this, please ignore this email and your password will remain unchanged.\n`
         };
 
-        if (process.env.NODE_ENV === 'test') {
+        if (ENV === 'test') {
           res.status(200).json({
             resetToken: resetPasswordToken,
             message:
@@ -601,16 +605,18 @@ export default class UserRouter {
 
       /* when testing, don't send a confirmation email */
 
-      if (process.env.NODE_ENV === 'test') {
+      if (ENV === 'test') {
         res.status(200).json({
-          message: 'Your password has been changed successfully'
+          message:
+            'Your password has been changed successfully. Redirecting you to the sign in page now...'
         });
       } else {
         try {
           await verifySMTP();
           await sendEmailAsync(emailData);
           res.status(200).json({
-            message: 'Your password has been changed successfully'
+            message:
+              'Your password has been changed successfully. Redirecting you to the sign in page now...'
           });
         } catch (error) {
           console.error(error.toString());
