@@ -3,9 +3,9 @@
   "version": "1.0.0",
   "main": "index.js",
   "author": "Christian Todd <christiantodd27@icloud.com>",
-  "license": "GNU GPLv3",
+  "license": "GPL-3.0",
   "engines": {
-    "node": "8.6.0"
+    "node": "8.9.1"
   },
   "scripts": {
     "start": "node lib/index.js",
