@@ -6,6 +6,7 @@ import * as morgan from 'morgan';
 import * as passport from 'passport';
 import * as compression from 'compression';
 import * as mongoose from 'mongoose';
+import { isCelebrate, errors } from 'celebrate';
 
 /* import all routers */
 import BestBuyRouter from './routes/BestBuyRouter';
@@ -58,14 +59,6 @@ app.use(morgan('dev'));
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: false }));
 app.use(passport.initialize());
-app.use(expressValidator());
-app.use((err, req, res, next) => {
-  console.error(err);
-  res.status(err.status || 500).json({
-    message: err.message,
-    error: err
-  });
-});
 
 /* create an instance of the each of our routers */
 const userRouter = new UserRouter();
@@ -74,6 +67,19 @@ const bestBuyRouter = new BestBuyRouter();
 /* attach all routers to our express app */
 app.use(userRouter.path, userRouter.router);
 app.use(bestBuyRouter.path, bestBuyRouter.router);
+
+/* Catch all error handling */
+app.use((err, req, res, next) => {
+  if (isCelebrate(err)) {
+    /* return validation message */
+    return res.status(422).json({ message: err.details[0].message });
+  } else {
+    /* return boom error with payload message */
+    return res
+      .status(err.output.statusCode || 500)
+      .json(err.output.payload || 'INTERNAL SERVER ERROR');
+  }
+});
 
 let server;
 

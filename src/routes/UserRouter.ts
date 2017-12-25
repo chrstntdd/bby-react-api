@@ -1,11 +1,23 @@
-import { randomBytes } from 'crypto';
-import { NextFunction, Request, Response, Router } from 'express';
-import { sign } from 'jsonwebtoken';
+import { Router } from 'express';
 import { ENV } from '../index';
-import * as nodemailer from 'nodemailer';
-import * as smtpTransport from 'nodemailer-smtp-transport';
-
+import { celebrate } from 'celebrate';
+import * as boom from 'boom';
 import User = require('../models/user');
+import {
+  setUserInfo,
+  generateJWT,
+  verifySMTP,
+  sendEmailAsync,
+  genToken,
+  asyncMiddleware
+} from '../util';
+import {
+  signIn,
+  createNew,
+  forgotPassword,
+  resetPassword,
+  verifyEmail
+} from '../config/validationSchemas';
 
 const upperFirst = require('lodash.upperfirst');
 const lowerFirst = require('lodash.lowerfirst');
@@ -17,82 +29,11 @@ let CLIENT_URL;
 ENV !== 'production'
   ? (CLIENT_URL = 'http://localhost:4444')
   : (CLIENT_URL = process.env.CLIENT_URL);
-const JWT_SECRET = process.env.JWT_SECRET;
-const EMAIL_USER = process.env.EMAIL_USER;
-const EMAIL_PASS = process.env.EMAIL_PASS;
-const SMTP_URL = process.env.SMTP_URL;
-process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
-/* EMAIL CONFIG */
-const transporter = nodemailer.createTransport(
-  smtpTransport({
-    service: 'gmail',
-    tls: {
-      rejectUnauthorized: false
-    },
-    auth: {
-      user: EMAIL_USER,
-      pass: EMAIL_PASS
-    }
-  })
-);
-
-const sendEmailAsync = emailData =>
-  new Promise((resolve, reject) => {
-    transporter.sendMail(emailData, err => {
-      err ? reject(err) : resolve(emailData);
-    });
-  });
-
-const verifySMTP = () =>
-  new Promise((resolve, reject) => {
-    transporter.verify(
-      (error, success) => (error ? reject(error) : resolve(success))
-    );
-  });
 
 /* Passport middleware */
 const passport = require('passport');
 const passportService = require('../config/passport');
 const requireAuth = passport.authenticate('jwt', { session: false });
-
-/* Utility functions */
-const generateJWT = user => sign(user, JWT_SECRET, { expiresIn: '2h' });
-
-const setUserInfo = ({ _id, email, profile, role, isVerified }) => ({
-  email,
-  role,
-  isVerified,
-  id: _id,
-  firstName: profile.firstName,
-  lastName: profile.lastName
-});
-
-/* In our use case the function it will take is an express route handler,
- * and since we are passing that handler into Promise.resolve it will
- * resolve with whatever value our route handler returns. If, however,
- * one of the await statements in our handler gives us a rejected promise,
- * it will go into the .catch on line 4 and be passed to next which will
- * eventually give the error to our express error middleware to handle.
- */
-export const asyncMiddleware = fn => (
-  req: Request,
-  res: Response,
-  next?: NextFunction
-): Promise<void> => Promise.resolve(fn(req, res, next)).catch(next);
-
-/* generate a verify token for the user */
-const genToken = async (size): Promise<any> => {
-  return await new Promise((resolve, reject) => {
-    randomBytes(size, (err, buffer) => {
-      if (buffer) {
-        resolve(buffer.toString('hex'));
-      }
-      if (err) {
-        reject(err);
-      }
-    });
-  });
-};
 
 /*
 * Main user router class
@@ -101,7 +42,7 @@ const genToken = async (size): Promise<any> => {
 
 export default class UserRouter {
   router: Router;
-  path: any;
+  path: string;
 
   constructor(path = '/api/v1/users') {
     this.router = Router();
@@ -110,190 +51,74 @@ export default class UserRouter {
   }
 
   /* return all users */
-  public async getAll(
-    req: Request,
-    res: Response,
-    next?: NextFunction
-  ): Promise<void> {
+  public async getAll(req, res, next): Promise<void> {
     const allUsers = await User.find();
-    !allUsers
-      ? res.status(404).json({ error: 'There are no users' })
-      : res.json(allUsers);
+    if (!allUsers) {
+      throw boom.notFound('There are no users');
+    } else {
+      res.json(allUsers);
+    }
   }
 
   /* get single user by id */
-  public async getById(
-    req: Request,
-    res: Response,
-    next?: NextFunction
-  ): Promise<void> {
+  public async getById(req, res, next): Promise<void> {
     const user = await User.findById(req.params.id);
-    !user
-      ? res.status(404).json({
-          error: `The user with the id ${req.params.id} can't be found`
-        })
-      : res.json(user);
+    if (!user) {
+      throw boom.notFound(
+        `The user with the id ${req.params.id} can't be found`
+      );
+    } else {
+      res.json(user);
+    }
   }
 
   /* Sign in handler*/
-  public async signIn(
-    req: Request,
-    res: Response,
-    next?: NextFunction
-  ): Promise<any> {
-    /* Sanitize and validate input */
-    req.checkBody('email', 'Please enter a valid email address').isEmail();
-    req.checkBody('email', 'Please enter an email').notEmpty();
+  public async signIn(req, res, next): Promise<any> {
+    const { email, password } = req.body;
 
-    req.checkBody('password', 'Please enter a password.').notEmpty();
-    req.checkBody('password', 'Please enter a valid password').isAlphanumeric();
-
-    req.sanitizeBody('email').normalizeEmail({
-      all_lowercase: true
-    });
-    req.sanitizeBody('email').escape();
-    req.sanitizeBody('email').trim();
-    req.sanitizeBody('password').escape();
-    req.sanitizeBody('password').trim();
-
-    const cleanEmail = req.body.email;
-    const cleanPassword = req.body.password;
-
-    const validationResult = await req.getValidationResult();
-
-    if (!validationResult.isEmpty()) {
-      const validationErrors = [];
-      validationResult.array().forEach(error => validationErrors.push(error));
-      return res.status(400).json({ validationErrors });
-    }
-
-    const existingUser = await User.findOne({ email: cleanEmail });
+    const existingUser = await User.findOne({ email });
     if (!existingUser) {
-      return res.status(400).json({
-        emailMessage:
-          "We can't seem to find an account registered with that id. Please try again"
-      });
+      throw boom.notFound(
+        "There doesn't appear to be an account with that id. Please try again."
+      );
     }
     /* if the existingUser has an account, but has yet to verify their email */
     if (!existingUser.isVerified) {
-      return res.status(400).json({
-        verifyMessage: 'Please verify your email before using this service.'
-      });
+      throw boom.forbidden(
+        'Please verify your email before using this service.'
+      );
+    }
+    /* if the supplied password param doesn't match the db password */
+    if (!await existingUser.comparePassword(password)) {
+      throw boom.unauthorized(
+        'Your password looks a bit off. Please try again.'
+      );
     }
 
-    existingUser.comparePassword(cleanPassword, (err, isMatch) => {
-      /* if there was an error */
-      if (err) {
-        return next(err);
-      }
-      /* if the supplied password param doesn't match the db password */
-      if (!isMatch) {
-        return res.status(400).json({
-          passwordMessage: 'Your password looks a bit off. Please try again.'
-        });
-      }
-
-      /* return the user successfully after  generating a JWT for
-       * client authentication
-       */
-      const userInfo = setUserInfo(existingUser);
-      return res.status(200).json({
-        jwt: `JWT ${generateJWT(userInfo)}`,
-        user: userInfo
-      });
+    /* return the user successfully after  generating a JWT for authentication */
+    const userInfo = setUserInfo(existingUser);
+    return res.status(200).json({
+      jwt: `JWT ${generateJWT(userInfo)}`,
+      user: userInfo
     });
   }
 
   /* create a new user (Register) */
-  public async createNew(
-    req: Request,
-    res: Response,
-    next?: NextFunction
-  ): Promise<any> {
-    /* Validation stack. Prepare yourself */
-    /* No need to validate the email since it's generated on the server from the employee number */
-    req.checkBody('firstName', 'Please enter your first name').notEmpty();
-    req
-      .checkBody(
-        'firstName',
-        'Only letters are allowed for names. Try again please.'
-      )
-      .isAlpha();
-
-    req.checkBody('lastName', 'Please enter your last name').notEmpty();
-    req
-      .checkBody(
-        'lastName',
-        'Only letters are allowed for names. Try again please.'
-      )
-      .isAlpha();
-
-    req.checkBody('password', 'Please enter in a password').notEmpty();
-    req
-      .checkBody(
-        'password',
-        'Your password should only contain alphanumeric characters'
-      )
-      .isAlphanumeric();
-
-    req
-      .checkBody('employeeNumber', 'Please enter your employee number')
-      .notEmpty();
-    req
-      .checkBody(
-        'employeeNumber',
-        'Your employee number should be in the format <LETTER><NUMBERiD>'
-      )
-      .isAlphanumeric();
-
-    req.checkBody('storeNumber', 'Please enter your store number').notEmpty();
-    req.checkBody('storeNumber', 'Please enter a valid store number').isInt();
-
-    /* Time to sanitize! */
-
-    req.sanitizeBody('firstName').escape();
-    req.sanitizeBody('firstName').trim();
-
-    req.sanitizeBody('lastName').escape();
-    req.sanitizeBody('lastName').trim();
-
-    req.sanitizeBody('password').escape();
-    req.sanitizeBody('password').trim();
-
-    req.sanitizeBody('employeeNumber').escape();
-    req.sanitizeBody('employeeNumber').trim();
-
-    req.sanitizeBody('storeNumber').escape();
-    req.sanitizeBody('storeNumber').trim();
-    req.sanitizeBody('storeNumber').toInt(10);
-
-    /* Assign validated and sanitized inputs to variables for later use */
+  public async createNew(req, res, next): Promise<any> {
     const { password, storeNumber } = req.body;
     const employeeNumber = lowerFirst(req.body.employeeNumber);
     const firstName = upperFirst(req.body.firstName);
     const lastName = upperFirst(req.body.lastName);
-
     const email = `${employeeNumber}@bestbuy.com`;
-
-    /* Accumulate errors in result and return error if so */
-    const validationResult = await req.getValidationResult();
-    if (!validationResult.isEmpty()) {
-      return res.status(406).json({
-        status: res.status,
-        messages: validationResult.array()
-      });
-    }
 
     /* await the call to check if the user exists already */
     const existingUser = await User.findOne({ email });
 
     /* if the user already has an account registered with their employee id */
     if (existingUser) {
-      return res.status(409).json({
-        status: res.status,
-        message:
-          'Sorry, it looks as if there is already an account associated with that employee number'
-      });
+      throw boom.conflict(
+        'Sorry, it looks as if there is already an account associated with that employee number'
+      );
     } else {
       /* create a new user */
       const newUser = await new User({
@@ -312,77 +137,50 @@ export default class UserRouter {
         text:
           'You are receiving this because you (or someone else) have requested an account with Quantified.\n\n' +
           'Please click on the following link, or paste this into your browser to complete the process:\n\n' +
-          `${CLIENT_URL}/verify-email?token=${newUser.confirmationEmailToken}\n\n` +
+          `${CLIENT_URL}/verify-email?token=${
+            newUser.confirmationEmailToken
+          }\n\n` +
           `If you did not request this, please ignore this email.\n`
       };
-      /* don't send a confirmation email when testing, but return the same result */
-      if (ENV === 'test') {
-        res.status(201).json({
+
+      /* ONLY SEND THE EMAIL IN PRODUCTION */
+      if (ENV === 'production') {
+        await verifySMTP();
+        await sendEmailAsync(emailData);
+        return res.status(201).json({
+          message:
+            'Thank you for signing up! Your account has been created, now please check your work email to confirm your account.'
+        });
+      } else {
+        return res.status(201).json({
           message:
             'Your account has been created, now please check your work email to confirm your account.'
         });
-      } else {
-        try {
-          await verifySMTP();
-          await sendEmailAsync(emailData);
-          res.status(201).json({
-            message:
-              'Thank you for signing up! Your account has been created, now please check your work email to confirm your account.'
-          });
-        } catch (error) {
-          console.error(error.toString());
-
-          // Extract error msg
-          const { message, code, response } = error;
-
-          // Extract response msg
-          const { headers, body } = response;
-
-          res.status(500).json({
-            message,
-            code,
-            response,
-            headers,
-            body
-          });
-        }
       }
     }
   }
 
   /* delete an existing user by the id params */
-  public async deleteById(
-    req: Request,
-    res: Response,
-    next?: NextFunction
-  ): Promise<void> {
+  public async deleteById(req, res, next): Promise<void> {
     const userToDelete = await User.findByIdAndRemove(req.params.id);
 
     if (!userToDelete) {
-      res.status(404).json({
-        error: `We cant find the user you\'re trying to delete 😐 `
-      });
+      throw boom.notFound("We cant find the user you're trying to delete");
     } else {
       const { firstName, lastName } = userToDelete.profile;
-      res.status(202).json({
+      return res.status(202).json({
         message: `${firstName} ${lastName} has been removed.`
       });
     }
   }
 
   /* update an existing user by the id params */
-  public async updateById(
-    req: Request,
-    res: Response,
-    next?: NextFunction
-  ): Promise<void> {
+  public async updateById(req, res, next): Promise<void> {
     /* get user that will be updated */
     const userToUpdate = await User.findById(req.params.id);
 
     if (!userToUpdate) {
-      res.status(404).json({
-        error: 'Whom are you looking for anyway my guy?'
-      });
+      throw boom.notFound("We cant find the user you're trying to update");
     } else {
       const { firstName, lastName } = userToUpdate.profile;
       const updated = {};
@@ -408,9 +206,7 @@ export default class UserRouter {
          * object with props sent in from the request body and set on user & save
          */
       if (errors.length > 0) {
-        res.status(401).json({
-          message: "You can't update those fields, brother"
-        });
+        throw boom.forbidden("You can't update those fields, brother");
       } else {
         mutableFields.forEach(field => {
           if (field in req.body) {
@@ -418,14 +214,13 @@ export default class UserRouter {
           }
         });
 
-        let updatedUser;
-        updatedUser = await User.update(
-          req.params.id,
+        const updatedUser = await User.update(
+          { _id: req.params.id },
           { $set: updated },
           { new: true }
         );
 
-        res.status(201).json({
+        return res.status(201).json({
           message: `${firstName} ${lastName} has updated their account`
         });
       }
@@ -433,23 +228,13 @@ export default class UserRouter {
   }
 
   /* verify an existing users account */
-  public async verifyEmail(
-    req: Request,
-    res: Response,
-    next?: NextFunction
-  ): Promise<void> {
-    req.sanitizeQuery('token').trim();
-    req.sanitizeQuery('token').escape();
-
+  public async verifyEmail(req, res, next): Promise<void> {
     const existingUser = await User.findOne({
       confirmationEmailToken: req.query.token
     });
 
     if (!existingUser) {
-      res.status(422).json({
-        status: res.status,
-        message: 'Account not found'
-      });
+      throw boom.notFound('Account not found');
     } else {
       /* if a user is found, flip the verified flag, clear the token, save the document, and set auth headers */
       existingUser.isVerified = true;
@@ -457,7 +242,7 @@ export default class UserRouter {
 
       const updatedUser = await existingUser.save();
       const userInfo = setUserInfo(updatedUser);
-      res.status(200).json({
+      return res.status(200).json({
         jwt: `JWT ${generateJWT(userInfo)}`,
         user: userInfo
       });
@@ -465,129 +250,68 @@ export default class UserRouter {
   }
 
   /* forgot password handler for existing users */
-  public async forgotPassword(
-    req: Request,
-    res: Response,
-    next?: NextFunction
-  ): Promise<void> {
-    /* Sanitize and validate input */
-    req
-      .checkBody('employeeNumber', 'Please enter your employee number')
-      .notEmpty();
-    req
-      .checkBody(
-        'employeeNumber',
-        'Your employee number should be in the format <LETTER><NUMBERiD>'
-      )
-      .isAlphanumeric();
+  public async forgotPassword(req, res, next): Promise<void> {
+    const { employeeNumber } = req.body;
 
-    req.sanitizeBody('employeeNumber').escape();
-    req.sanitizeBody('employeeNumber').trim();
+    const existingUser = await User.findOne({ employeeNumber });
 
-    /* Assign valid and sanitized input to a variable for use */
-    /* ACTUALLY COMING IN AS THE EMPLOYEE NUMBER */
-    const cleanEmployeeNumber: string = req.body.employeeNumber;
-
-    /* Accumulate errors in result and return errors if so */
-    const validationResult = await req.getValidationResult();
-
-    if (!validationResult.isEmpty()) {
-      const validationErrors = [];
-      validationResult.array().forEach(error => validationErrors.push(error));
-      res.status(400).json({ validationErrors });
+    if (!existingUser) {
+      throw boom.notFound(
+        "We can't find an account associated with that employee number. Please try again."
+      );
     } else {
-      /* get existing user */
-      const existingUser = await User.findOne({
-        employeeNumber: cleanEmployeeNumber
-      });
+      /* set the token and expiration time */
+      const resetPasswordToken = await genToken(24);
+      existingUser.resetPasswordToken = resetPasswordToken;
+      existingUser.resetPasswordExpires = Date.now() + 3600000; /* 1 Hour */
 
-      if (!existingUser) {
-        res.status(404).json({
-          error:
-            "We can't find an account associated with that employee number. Please try again."
+      await existingUser.save();
+
+      const emailData = {
+        to: existingUser.email,
+        from: 'noreply@quantified',
+        subject: 'Quantified Password Reset',
+        text:
+          'You are receiving this because you (or someone else) have requested the reset of the password for your account.\n\n' +
+          'Please click on the following link, or paste this into your browser to complete the process:\n\n' +
+          `${CLIENT_URL}/reset-password?token=${resetPasswordToken}\n\n` +
+          `If you did not request this, please ignore this email and your password will remain unchanged.\n`
+      };
+
+      if (ENV === 'production') {
+        await verifySMTP();
+        await sendEmailAsync(emailData);
+        return res.status(200).json({
+          resetToken: resetPasswordToken,
+          message:
+            'Thank you. Please check your work email for a message containing the link to reset your password.'
         });
       } else {
-        /* set the token and expiration time */
-        const resetPasswordToken = await genToken(24);
-        existingUser.resetPasswordToken = resetPasswordToken;
-        existingUser.resetPasswordExpires = Date.now() + 3600000; /* 1 Hour */
-
-        await existingUser.save();
-
-        const emailData = {
-          to: existingUser.email,
-          from: 'noreply@quantified',
-          subject: 'Quantified Password Reset',
-          text:
-            'You are receiving this because you (or someone else) have requested the reset of the password for your account.\n\n' +
-            'Please click on the following link, or paste this into your browser to complete the process:\n\n' +
-            `${CLIENT_URL}/reset-password?token=${resetPasswordToken}\n\n` +
-            `If you did not request this, please ignore this email and your password will remain unchanged.\n`
-        };
-
-        if (ENV === 'test') {
-          res.status(200).json({
-            resetToken: resetPasswordToken,
-            message:
-              'Thank you. Please check your work email for a message containing the link to reset your password.'
-          });
-        } else {
-          try {
-            await verifySMTP();
-            await sendEmailAsync(emailData);
-            res.status(200).json({
-              resetToken: resetPasswordToken,
-              message:
-                'Thank you. Please check your work email for a message containing the link to reset your password.'
-            });
-          } catch (error) {
-            console.error(error.toString());
-
-            // Extract error msg
-            const { message, code, response } = error;
-
-            // Extract response msg
-            const { headers, body } = response;
-
-            res.status(500).json({
-              message,
-              code,
-              response,
-              headers,
-              body
-            });
-          }
-        }
+        return res.status(200).json({
+          resetToken: resetPasswordToken,
+          message:
+            'Thank you. Please check your work email for a message containing the link to reset your password.'
+        });
       }
     }
   }
 
   /* reset password handler for existing users */
-  public async resetPassword(
-    req: Request,
-    res: Response,
-    next?: NextFunction
-  ): Promise<void> {
+  public async resetPassword(req, res, next): Promise<void> {
     const existingUser = await User.findOne({
       resetPasswordToken: req.query.token,
       resetPasswordExpires: { $gt: Date.now() }
     });
 
     if (!existingUser) {
-      res.status(400).json({
-        error:
-          'Whoops! It looks like your reset token has already expired. Please try to reset your password again.'
-      });
+      throw boom.badRequest(
+        'Whoops! It looks like your reset token has already expired. Please try to reset your password again.'
+      );
     } else {
-      /* Sanitize password */
-      req.sanitizeBody('password').escape();
-      req.sanitizeBody('password').trim();
-
-      /* Assign sanitized password to variable */
-      const newPassword = req.body.password;
+      const { password } = req.body;
 
       /* save the new password and clear the reset token in DB */
-      existingUser.password = newPassword;
+      existingUser.password = password;
       existingUser.resetPasswordToken = undefined;
       existingUser.resetPasswordExpires = undefined;
 
@@ -605,61 +329,37 @@ export default class UserRouter {
 
       /* when testing, don't send a confirmation email */
 
-      if (ENV === 'test') {
-        res.status(200).json({
+      if (ENV === 'production') {
+        await verifySMTP();
+        await sendEmailAsync(emailData);
+        return res.status(200).json({
           message:
             'Your password has been changed successfully. Redirecting you to the sign in page now...'
         });
       } else {
-        try {
-          await verifySMTP();
-          await sendEmailAsync(emailData);
-          res.status(200).json({
-            message:
-              'Your password has been changed successfully. Redirecting you to the sign in page now...'
-          });
-        } catch (error) {
-          console.error(error.toString());
-
-          // Extract error msg
-          const { message, code, response } = error;
-
-          // Extract response msg
-          const { headers, body } = response;
-
-          res.status(500).json({
-            message,
-            code,
-            response,
-            headers,
-            body
-          });
-        }
+        return res.status(200).json({
+          message:
+            'Your password has been changed successfully. Redirecting you to the sign in page now...'
+        });
       }
     }
   }
 
-  public async getSavedTable(
-    req: Request,
-    res: Response,
-    next?: NextFunction
-  ): Promise<void> {
+  public async getSavedTable(req, res, next): Promise<void> {
     const userId = req.params.id;
     const user = await User.findById(userId);
-    !user
-      ? res.status(404).json({
-          error: "Can't seem to find those products you were looking for"
-        })
-      : res.status(200).json({
-          products: user.tableData.products
-        });
+    if (!user) {
+      throw boom.notFound(
+        "Can't seem to find those products you were looking for"
+      );
+    } else {
+      return res.status(200).json({
+        products: user.tableData.products
+      });
+    }
   }
 
-  public async updateSavedTable(
-    req: Request,
-    res: Response,
-    next?: NextFunction
-  ): Promise<void> {
+  public async updateSavedTable(req, res, next): Promise<void> {
     const { currentTableState } = req.body;
     const userId = req.params.id;
 
@@ -669,14 +369,14 @@ export default class UserRouter {
       { new: true }
     );
 
-    !updatedUser
-      ? res.status(404).json({
-          error: "Can't seem to find the user to update their table"
-        })
-      : res.status(201).json({
-          updatedUser,
-          message: 'Updated the table successfully!'
-        });
+    if (!updatedUser) {
+      throw boom.notFound("Can't seem to find the user to update their table");
+    } else {
+      return res.status(201).json({
+        updatedUser,
+        message: 'Updated the table successfully!'
+      });
+    }
   }
 
   /* attach route handlers to their endpoints */
@@ -693,11 +393,31 @@ export default class UserRouter {
       requireAuth,
       asyncMiddleware(this.updateSavedTable)
     );
-    this.router.post('/', asyncMiddleware(this.createNew));
-    this.router.post('/sign-in', asyncMiddleware(this.signIn));
-    this.router.post('/verify-email', asyncMiddleware(this.verifyEmail));
-    this.router.post('/forgot-password', asyncMiddleware(this.forgotPassword));
-    this.router.post('/reset-password', asyncMiddleware(this.resetPassword));
+    this.router.post(
+      '/',
+      celebrate(createNew),
+      asyncMiddleware(this.createNew)
+    );
+    this.router.post(
+      '/sign-in',
+      celebrate(signIn),
+      asyncMiddleware(this.signIn)
+    );
+    this.router.post(
+      '/verify-email',
+      celebrate(verifyEmail),
+      asyncMiddleware(this.verifyEmail)
+    );
+    this.router.post(
+      '/forgot-password',
+      celebrate(forgotPassword),
+      asyncMiddleware(this.forgotPassword)
+    );
+    this.router.post(
+      '/reset-password',
+      celebrate(resetPassword),
+      asyncMiddleware(this.resetPassword)
+    );
     this.router.put('/:id', asyncMiddleware(this.updateById));
     this.router.delete('/:id', asyncMiddleware(this.deleteById));
   }

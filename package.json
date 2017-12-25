@@ -13,16 +13,17 @@
     "build": "tsc src/ -d lib/",
     "build-win": "node_modules/.bin/tsc -p t:/Development/projects/bby-react-api/tsconfig.json",
     "genData": "node -e 'require(\"./generateTestData.js\").writeFileToDisk()'",
-    "test": "mocha -c --reporter spec --compilers ts:ts-node/register ./test/*.test.ts --timeout 20000 "
+    "test": "mocha -c --reporter spec --compilers ts:ts-node/register ./test/*.test.ts --timeout 30000 "
   },
   "dependencies": {
-    "bcrypt-nodejs": "^0.0.3",
+    "bcrypt": "^1.0.3",
     "bestbuy": "^1.1.0",
     "body-parser": "^1.17.2",
+    "boom": "^7.1.1",
+    "celebrate": "^7.0.4",
     "compression": "^1.7.1",
     "dotenv": "^4.0.0",
-    "express": "^4.15.3",
-    "express-validator": "^4.1.1",
+    "express": "^4.16.2",
     "helmet": "^3.8.0",
     "jsonwebtoken": "^7.4.1",
     "lodash.lowerfirst": "^4.3.1",
@@ -36,9 +37,11 @@
   },
   "devDependencies": {
     "@types/body-parser": "^1.16.4",
+    "@types/boom": "^4.3.8",
     "@types/chai": "^4.0.2",
     "@types/chai-http": "^3.0.0",
     "@types/express": "^4.0.36",
+    "@types/joi": "^13.0.3",
     "@types/mocha": "^2.2.41",
     "@types/mongodb": "^2.2.9",
     "@types/mongoose": "^4.7.19",

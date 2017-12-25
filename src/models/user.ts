@@ -1,8 +1,10 @@
-import { compare, genSalt, hash } from 'bcrypt-nodejs';
+import { compare, genSalt, hash } from 'bcrypt';
 import * as mongoose from 'mongoose';
 
 import { IUser } from '../interfaces';
 import { ProductSchema } from './product';
+
+const SALT_FACTOR = 12;
 
 interface IUserModel extends IUser, mongoose.Document {}
 
@@ -68,29 +70,47 @@ userSchema.virtual('url').get(function() {
   return `/api/v1/users/${this._id}`;
 });
 
-userSchema.pre('save', function(next) {
-  const user = this;
-  /* Yeah we bout that security */
-  const SALT_FACTOR = 12;
+const hashPassword = async (password: string): Promise<string> => {
+  try {
+    if (!password) {
+      return null;
+    }
+    const hashedPassword = await hash(password, SALT_FACTOR);
+    return hashedPassword;
+  } catch (err) {
+    console.log(err);
+  }
+};
 
-  if (!user.isModified('password')) return next();
+userSchema.methods.comparePassword = async function(
+  password: string
+): Promise<Boolean> {
+  try {
+    return await compare(password, this.password);
+  } catch (err) {
+    console.log(err);
+  }
+};
 
-  /* Hash the user's password */
-  genSalt(SALT_FACTOR, (err, salt) => {
-    if (err) return next(err);
-    hash(user.password, salt, null, (err, hash) => {
-      if (err) return next(err);
-      user.password = hash;
-      next();
-    });
-  });
+userSchema.pre('save', async function(next) {
+  try {
+    /* this is the user object */
+    !this.isModified('password') && next();
+    const hashedPassword = await hash(this.password, SALT_FACTOR);
+    this.password = hashedPassword;
+    next();
+  } catch (err) {
+    next(err);
+  }
 });
 
-userSchema.methods.comparePassword = function(inputPassword, callback) {
-  compare(inputPassword, this.password, (err, isMatch) => {
-    err ? callback(err) : callback(null, isMatch);
-  });
-};
+userSchema.pre('findOneAndUpdate', async function(next) {
+  const password = await hashPassword(this.getUpdate().$set.password);
+
+  !password && next();
+
+  this.findOneAndUpdate({}, { password });
+});
 
 // tslint:disable-next-line:variable-name
 const User = mongoose.model<IUserModel>('User', userSchema, 'User');

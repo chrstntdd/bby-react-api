@@ -27,5 +27,5 @@ export interface IUser {
     tableMetadata: string;
     products: any[];
   };
-  comparePassword(cleanPassword: string, callback: any);
+  comparePassword(requestPassword: string): Promise<Boolean>;
 }

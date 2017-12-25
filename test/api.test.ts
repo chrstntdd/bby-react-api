@@ -147,40 +147,42 @@ describe('The API', () => {
     ];
 
     it('should create a new user when all the required fields are submitted', async () => {
-      const newUser = generateNewUser();
-      let res;
-      res = await chai
+      const {
+        password,
+        firstName,
+        lastName,
+        employeeNumber,
+        storeNumber,
+        email
+      } = generateNewUser();
+      const res = await chai
         .request(app)
         .post('/api/v1/users')
         .send({
-          email: newUser.email,
-          password: newUser.password,
-          confirmPassword: newUser.password,
-          firstName: newUser.firstName,
-          lastName: newUser.lastName,
-          employeeNumber: newUser.employeeNumber,
-          storeNumber: newUser.storeNumber
+          password,
+          firstName,
+          lastName,
+          employeeNumber,
+          storeNumber
         });
+
       res.should.exist;
       res.should.be.json;
       res.status.should.equal(201);
       res.body.should.contain.keys('message');
       res.body.message.should.be.a('string');
 
-      let createdUser;
-      createdUser = await User.findOne({ email: newUser.email });
+      const createdUser = await User.findOne({ email });
       createdUser.should.exist;
     });
-    it('should 409 for a existing user trying to register with valid credentials', () => {
+    it('should 409 for an existing user trying to register with valid credentials', () => {
       return User.findOne().then(userObject => {
         const { email, password, employeeNumber, storeNumber } = userObject;
         return chai
           .request(app)
           .post('/api/v1/users')
           .send({
-            email,
             password,
-            confirmPassword: password,
             firstName: userObject.profile.firstName,
             lastName: userObject.profile.lastName,
             employeeNumber,
@@ -198,7 +200,7 @@ describe('The API', () => {
           });
       });
     });
-    it('should 406 if there are validation issue', () => {
+    it('should 422 if there are validation issue', () => {
       const invalidUser = generateNewUser();
       invalidUser.firstName = 42;
       invalidUser.lastName = 24;
@@ -206,7 +208,6 @@ describe('The API', () => {
       invalidUser.employeeNumber =
         '<script>let i = 0; while(true){i++}</script>';
       const {
-        email,
         password,
         firstName,
         lastName,
@@ -217,20 +218,18 @@ describe('The API', () => {
         .request(app)
         .post('/api/v1/users')
         .send({
-          email,
           password,
-          confirmPassword: password,
           firstName,
           lastName,
           employeeNumber,
           storeNumber
         })
         .then(res => {
-          res.status.should.equal(406);
+          res.status.should.equal(422);
         })
         .catch(err => {
           err.response.error;
-          err.response.error.status.should.equal(406);
+          err.response.error.status.should.equal(422);
         });
     });
   });
@@ -270,7 +269,7 @@ describe('The API', () => {
 
   /* Update user by id */
   describe("PUT /api/v1/users:id - update a user's information by id params", () => {
-    it('should update the fields specified in the query', () => {
+    it('should update the fields specified in the query', async () => {
       const dataToUpdate = {
         id: '',
         profile: {
@@ -280,29 +279,26 @@ describe('The API', () => {
         storeNumber: 420,
         password: 'supersecret password'
       };
-      return User.findOne().then(userObject => {
-        dataToUpdate.id = userObject.id;
+      const userObject = await User.findOne();
+      dataToUpdate.id = userObject.id;
 
-        return chai
-          .request(app)
-          .put(`/api/v1/users/${userObject.id}`)
-          .send(dataToUpdate)
-          .then(res => {
-            res.should.be.json;
-            res.body.should.contain.keys('message');
-            return User.findById(dataToUpdate.id);
-          })
-          .then(updatedUser => {
-            updatedUser.profile.firstName.should.contain(
-              dataToUpdate.profile.firstName
-            );
-            updatedUser.profile.lastName.should.contain(
-              dataToUpdate.profile.lastName
-            );
-            updatedUser.storeNumber.should.equal(dataToUpdate.storeNumber);
-            updatedUser.password.should.equal(dataToUpdate.password);
-          });
-      });
+      const res = await chai
+        .request(app)
+        .put(`/api/v1/users/${userObject.id}`)
+        .send(dataToUpdate);
+
+      res.should.be.json;
+      res.body.should.contain.keys('message');
+      const updatedUser = await User.findById(dataToUpdate.id);
+
+      updatedUser.profile.firstName.should.contain(
+        dataToUpdate.profile.firstName
+      );
+      updatedUser.profile.lastName.should.contain(
+        dataToUpdate.profile.lastName
+      );
+      updatedUser.storeNumber.should.equal(dataToUpdate.storeNumber);
+      updatedUser.password.should.equal(dataToUpdate.password);
     });
     it("should return an error if the user with the requested id doesn't exist", async () => {
       try {
@@ -346,14 +342,14 @@ describe('The API', () => {
           .put(`/api/v1/users/${userObject.id}`)
           .send(dataToUpdate)
           .then(res => {
-            res.status.should.equal(401);
+            res.status.should.equal(403);
           })
           .catch(err => {
             err.should.exist;
             err.response.error.path.should.equal(
               `/api/v1/users/${userObject.id}`
             );
-            err.response.error.status.should.equal(401);
+            err.response.error.status.should.equal(403);
           });
       });
     });
@@ -382,12 +378,12 @@ describe('The API', () => {
         .request(app)
         .post(`/api/v1/users/verify-email?token=9bB9zLmc23G2EF5p`)
         .then(res => {
-          res.status.should.equal(422);
+          res.status.should.equal(404);
         })
         .catch(err => {
           err.should.exist;
           err.response.body.should.contain.keys('message');
-          err.status.should.equal(422);
+          err.status.should.equal(404);
         });
     });
   });
@@ -421,15 +417,13 @@ describe('The API', () => {
         .request(app)
         .post('/api/v1/users/forgot-password')
         .then(res => {
-          res.status.should.equal(400);
+          res.status.should.equal(422);
         })
         .catch(err => {
           err.should.exist;
-          err.status.should.equal(400);
-          const validationMsg = JSON.parse(err.response.error.text);
-          validationMsg.should.be.an('object');
-          validationMsg.validationErrors.should.be.an('array');
-          validationMsg.validationErrors.should.have.length.of.at.least(1);
+          err.status.should.equal(422);
+          const { message } = JSON.parse(err.response.error.text);
+          message.should.be.a('string');
         });
     });
     it('should return an error message if the employeeNumber is invalid', () => {
@@ -439,18 +433,13 @@ describe('The API', () => {
         .post('/api/v1/users/forgot-password')
         .send({ employeeNumber: invalidEmployeeNumber })
         .then(res => {
-          res.status.should.equal(400);
+          res.status.should.equal(422);
         })
         .catch(err => {
           err.should.exist;
-          err.status.should.equal(400);
-          const validationMsg = JSON.parse(err.response.error.text);
-          validationMsg.should.be.an('object');
-          validationMsg.validationErrors.should.be.an('array');
-          validationMsg.validationErrors.should.have.length.of.at.least(1);
-          validationMsg.validationErrors[0].value.should.equal(
-            invalidEmployeeNumber
-          );
+          err.status.should.equal(422);
+          const { message } = JSON.parse(err.response.error.text);
+          message.should.be.a('string');
         });
     });
     it("should return an error message if the user can't be found with the supplied email", () => {
@@ -662,39 +651,35 @@ describe('POST /api/v1/users/sign-in - allow user to authenticate and receive JW
     res.status.should.equal(200);
     res.body.should.contain.keys('jwt', 'user');
   });
-  it('passport should return a 400 if email is empty', () => {
+  it('should return a 422 if email is empty', () => {
     return chai
       .request(app)
       .post('/api/v1/users/sign-in')
       .send({ email: '', password: 'password' })
       .then(res => {
-        res.status.should.equal(400);
+        res.status.should.equal(422);
       })
       .catch(err => {
-        err.response.error.status.should.equal(400);
+        err.response.error.status.should.equal(422);
       });
   });
-  it('should return validation errors if the email fails validation', () => {
-    const invalidEmail = 'invalidemai1.com-';
-    return chai
-      .request(app)
-      .post('/api/v1/users/sign-in')
-      .send({ email: invalidEmail, password: 'password' })
-      .then(res => {
-        res.status.should.equal(400);
-      })
-      .catch(err => {
-        const validationMsg = JSON.parse(err.response.error.text);
-        err.should.exist;
-        validationMsg.should.be.an('object');
-        validationMsg.validationErrors.should.be.an('array');
-        validationMsg.validationErrors.should.have.length.of.at.least(1);
-        validationMsg.validationErrors[0].should.contain.keys(
-          'param',
-          'msg',
-          'value'
-        );
-        err.response.error.status.should.equal(400);
-      });
+  it('should return validation errors if the email fails validation', async () => {
+    try {
+      const invalidEmail = 'c%#c.com-';
+
+      const res = await chai
+        .request(app)
+        .post('/api/v1/users/sign-in')
+        .send({ email: invalidEmail, password: 'password' });
+
+      res.should.exist;
+      res.should.be.json;
+      res.status.should.equal(422);
+    } catch (err) {
+      const errorMsg = JSON.parse(err.response.error.text);
+      errorMsg.message.should.be.a('string');
+      err.should.exist;
+      err.status.should.equal(422);
+    }
   });
 });
